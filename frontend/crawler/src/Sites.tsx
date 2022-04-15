@@ -25,47 +25,34 @@ import FilterListIcon from '@mui/icons-material/FilterList';
 import Addicon from '@mui/icons-material/Add';
 import TextField from '@mui/material/TextField';
 
-
-
 interface Data {
-    calories: number;
-    carbs: number;
-    fat: number;
-    name: string;
-    protein: number;
+    url: string;
+    label: string;
+    interval: number;
+    status: boolean;
+    regex: string;
 }
 
 function createData(
-    name: string,
-    calories: number,
-    fat: number,
-    carbs: number,
-    protein: number,
+    url: string,
+    label: string,
+    interval: number,
+    status: boolean,
+    regex: string,
 ): Data {
     return {
-        name,
-        calories,
-        fat,
-        carbs,
-        protein,
+        url,
+        label,
+        interval,
+        status,
+        regex,
     };
 }
 
-const rows = [
-    createData('Cupcake', 305, 3.7, 67, 4.3),
-    createData('Donut', 452, 25.0, 51, 4.9),
-    createData('Eclair', 262, 16.0, 24, 6.0),
-    createData('Frozen yoghurt', 159, 6.0, 24, 4.0),
-    createData('Gingerbread', 356, 16.0, 49, 3.9),
-    createData('Honeycomb', 408, 3.2, 87, 6.5),
-    createData('Ice cream sandwich', 237, 9.0, 37, 4.3),
-    createData('Jelly Bean', 375, 0.0, 94, 0.0),
-    createData('KitKat', 518, 26.0, 65, 7.0),
-    createData('Lollipop', 392, 0.2, 98, 0.0),
-    createData('Marshmallow', 318, 0, 81, 2.0),
-    createData('Nougat', 360, 19.0, 9, 37.0),
-    createData('Oreo', 437, 18.0, 63, 4.0),
-];
+let rows: Data[] = [];
+for (let i = 0; i < 20; i++) {
+    rows.push(createData('example.org', 'Example', 42, true, "./*"));
+}
 
 function descendingComparator<T>(a: T, b: T, orderBy: keyof T) {
     if (b[orderBy] < a[orderBy]) {
@@ -83,8 +70,8 @@ function getComparator<Key extends keyof any>(
     order: Order,
     orderBy: Key,
 ): (
-        a: { [key in Key]: number | string },
-        b: { [key in Key]: number | string },
+        a: { [key in Key]: number | string | boolean },
+        b: { [key in Key]: number | string | boolean },
     ) => number {
     return order === 'desc'
         ? (a, b) => descendingComparator(a, b, orderBy)
@@ -102,44 +89,44 @@ interface HeadCell {
 
 const headCells: readonly HeadCell[] = [
     {
-        id: 'name',
+        id: 'label',
         numeric: false,
         disablePadding: true,
-        label: 'Dessert (100g serving)',
+        label: 'Label',
         canFilter: true,
         canOrder: true,
     },
     {
-        id: 'calories',
-        numeric: true,
+        id: 'url',
+        numeric: false,
         disablePadding: false,
-        label: 'Calories',
+        label: 'URL',
         canFilter: true,
         canOrder: true,
     },
     {
-        id: 'fat',
+        id: 'interval',
         numeric: true,
         disablePadding: false,
-        label: 'Fat (g)',
+        label: 'Periodicity',
+        canFilter: false,
+        canOrder: true,
+    },
+    {
+        id: 'status',
+        numeric: false,
+        disablePadding: false,
+        label: 'Active',
         canFilter: true,
         canOrder: true,
     },
     {
-        id: 'carbs',
-        numeric: true,
+        id: 'regex',
+        numeric: false,
         disablePadding: false,
-        label: 'Carbs (g)',
+        label: 'Regex',
         canFilter: false,
         canOrder: false,
-    },
-    {
-        id: 'protein',
-        numeric: true,
-        disablePadding: false,
-        label: 'Protein (g)',
-        canFilter: true,
-        canOrder: true,
     },
 ];
 
@@ -300,7 +287,7 @@ function SitesContent() {
 
     /** Enhanced table props */
     const [order, setOrder] = React.useState<Order>('asc');
-    const [orderBy, setOrderBy] = React.useState<keyof Data>('calories');
+    const [orderBy, setOrderBy] = React.useState<keyof Data>('label');
     const [selected, setSelected] = React.useState<readonly string[]>([]);
     const [dense, setDense] = React.useState(false);
 
@@ -316,7 +303,7 @@ function SitesContent() {
 
     const handleSelectAllClick = (event: React.ChangeEvent<HTMLInputElement>) => {
         if (event.target.checked) {
-            const newSelecteds = rows.map((n) => n.name);
+            const newSelecteds = rows.map((n) => n.label);
             setSelected(newSelecteds);
             return;
         }
@@ -377,17 +364,17 @@ function SitesContent() {
                                 {rows.slice().sort(getComparator(order, orderBy))
                                     .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
                                     .map((row, index) => {
-                                        const isItemSelected = isSelected(row.name);
+                                        const isItemSelected = isSelected(row.label);
                                         const labelId = `enhanced-table-checkbox-${index}`;
 
                                         return (
                                             <TableRow
                                                 hover
-                                                onClick={(event) => handleClick(event, row.name)}
+                                                onClick={(event) => handleClick(event, row.label)}
                                                 role="checkbox"
                                                 aria-checked={isItemSelected}
                                                 tabIndex={-1}
-                                                key={row.name}
+                                                key={row.label}
                                                 selected={isItemSelected}
                                             >
                                                 <TableCell padding="checkbox">
@@ -405,12 +392,12 @@ function SitesContent() {
                                                     scope="row"
                                                     padding="none"
                                                 >
-                                                    {row.name}
+                                                    {row.label}
                                                 </TableCell>
-                                                <TableCell align="right">{row.calories}</TableCell>
-                                                <TableCell align="right">{row.fat}</TableCell>
-                                                <TableCell align="right">{row.carbs}</TableCell>
-                                                <TableCell align="right">{row.protein}</TableCell>
+                                                <TableCell>{row.url}</TableCell>
+                                                <TableCell align="right">{row.interval}</TableCell>
+                                                <TableCell ><Checkbox checked={row.status} /></TableCell>
+                                                <TableCell >{row.regex}</TableCell>
                                             </TableRow>
                                         );
                                     })}

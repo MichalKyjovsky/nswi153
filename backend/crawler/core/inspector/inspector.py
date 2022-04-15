@@ -1,10 +1,12 @@
+import json
+
 from bs4 import BeautifulSoup
 import requests
 import requests.exceptions
 from urllib.parse import urlsplit
 from collections import deque
 import re
-import json
+from operator import itemgetter
 
 
 class Inspector(object):
@@ -14,6 +16,7 @@ class Inspector(object):
 
     @classmethod
     def _handle_urls(cls, urls, new_urls, processed_urls, boundary_regex, cur_obj, filtered_urls, base_url):
+
         for i in urls:
             if i not in new_urls and i not in processed_urls and re.match(rf'{boundary_regex}', i):
                 new_urls.append(i)
@@ -27,10 +30,6 @@ class Inspector(object):
     def crawl_url(cls, base_url: str, boundary_regex: str):
         """
         TODO: Add comment
-
-        >>> Inspector.crawl_url("https://scrapethissite.com", "")
-        ['https://scrapethissite.com', 'https://scrapethissite.com/', 'https://scrapethissite.com/faq/', 'https://scrapethissite.com/lessons/', 'https://scrapethissite.com/login/', 'https://scrapethissite.com/pages/', 'https://scrapethissite.com/pages/advanced/', 'https://scrapethissite.com/pages/advanced/?gotcha=csrf', 'https://scrapethissite.com/pages/advanced/?gotcha=headers', 'https://scrapethissite.com/pages/advanced/?gotcha=login', 'https://scrapethissite.com/pages/ajax-javascript/', 'https://scrapethissite.com/pages/forms/', 'https://scrapethissite.com/pages/forms/?page_num=1', 'https://scrapethissite.com/pages/forms/?page_num=10', 'https://scrapethissite.com/pages/forms/?page_num=11', 'https://scrapethissite.com/pages/forms/?page_num=12', 'https://scrapethissite.com/pages/forms/?page_num=13', 'https://scrapethissite.com/pages/forms/?page_num=14', 'https://scrapethissite.com/pages/forms/?page_num=15', 'https://scrapethissite.com/pages/forms/?page_num=16', 'https://scrapethissite.com/pages/forms/?page_num=17', 'https://scrapethissite.com/pages/forms/?page_num=18', 'https://scrapethissite.com/pages/forms/?page_num=19', 'https://scrapethissite.com/pages/forms/?page_num=2', 'https://scrapethissite.com/pages/forms/?page_num=20', 'https://scrapethissite.com/pages/forms/?page_num=21', 'https://scrapethissite.com/pages/forms/?page_num=22', 'https://scrapethissite.com/pages/forms/?page_num=23', 'https://scrapethissite.com/pages/forms/?page_num=24', 'https://scrapethissite.com/pages/forms/?page_num=3', 'https://scrapethissite.com/pages/forms/?page_num=4', 'https://scrapethissite.com/pages/forms/?page_num=5', 'https://scrapethissite.com/pages/forms/?page_num=6', 'https://scrapethissite.com/pages/forms/?page_num=7', 'https://scrapethissite.com/pages/forms/?page_num=8', 'https://scrapethissite.com/pages/forms/?page_num=9', 'https://scrapethissite.com/pages/frames/', 'https://scrapethissite.com/pages/simple/', 'https://scrapethissite.com/robots.txt']
-
 
         """
 
@@ -96,14 +95,13 @@ class Inspector(object):
             cls._handle_urls(local_urls, new_urls, processed_urls, boundary_regex, cur_obj, filtered_urls, base_url)
             cls._handle_urls(foreign_urls, new_urls, processed_urls, boundary_regex, cur_obj, filtered_urls, base_url)
 
+            cur_obj["executionTargets"] = sorted(cur_obj["executionTargets"])
+
             out_dump.append(cur_obj)
 
         out_dump = out_dump + [
             {"url": x, "domain": "{0.netloc}".format(urlsplit(x)), "executionTargets": []} for x
             in filtered_urls]
 
-        return json.dumps(out_dump)
-
-
-if __name__ == '__main__':
-    print(Inspector.crawl_url("https://scrapethissite.com/", ".*(scrapethissite.com/lessons/|gum.co.*)$"))
+        return sorted(out_dump, key=itemgetter("url"))
+        # return json.dumps(sorted(out_dump, key=itemgetter("url")))

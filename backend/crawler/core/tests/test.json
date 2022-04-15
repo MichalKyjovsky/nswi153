@@ -1,0 +1,75 @@
+[
+  {
+    "url": "https://gum.co/oLpqb/LASTCHANCE?wanted=true",
+    "domain": "gum.co",
+    "executionTargets": [
+      "https://gum.co/oLpqb?wanted=true",
+      "https://gumroad.com",
+      "https://scrapethissite.com/",
+      "https://scrapethissite.com/faq/",
+      "https://scrapethissite.com/lessons/",
+      "https://scrapethissite.com/login/",
+      "https://scrapethissite.com/pages/"
+    ]
+  },
+  {
+    "url": "https://gum.co/oLpqb?wanted=true",
+    "domain": "gum.co",
+    "executionTargets": [
+      "https://gum.co/oLpqb/LASTCHANCE?wanted=true",
+      "https://gumroad.com",
+      "https://scrapethissite.com/",
+      "https://scrapethissite.com/faq/",
+      "https://scrapethissite.com/lessons/",
+      "https://scrapethissite.com/login/",
+      "https://scrapethissite.com/pages/"
+    ]
+  },
+  {
+    "url": "https://gumroad.com",
+    "domain": "gumroad.com",
+    "executionTargets": []
+  },
+  {
+    "url": "https://scrapethissite.com/",
+    "domain": "scrapethissite.com",
+    "executionTargets": [
+      "https://scrapethissite.com/faq/",
+      "https://scrapethissite.com/lessons/",
+      "https://scrapethissite.com/login/",
+      "https://scrapethissite.com/pages/"
+    ]
+  },
+  {
+    "url": "https://scrapethissite.com/",
+    "domain": "scrapethissite.com",
+    "executionTargets": []
+  },
+  {
+    "url": "https://scrapethissite.com/faq/",
+    "domain": "scrapethissite.com",
+    "executionTargets": []
+  },
+  {
+    "url": "https://scrapethissite.com/lessons/",
+    "domain": "scrapethissite.com",
+    "executionTargets": [
+      "https://gum.co/oLpqb/LASTCHANCE?wanted=true",
+      "https://gum.co/oLpqb?wanted=true",
+      "https://scrapethissite.com/",
+      "https://scrapethissite.com/faq/",
+      "https://scrapethissite.com/login/",
+      "https://scrapethissite.com/pages/"
+    ]
+  },
+  {
+    "url": "https://scrapethissite.com/login/",
+    "domain": "scrapethissite.com",
+    "executionTargets": []
+  },
+  {
+    "url": "https://scrapethissite.com/pages/",
+    "domain": "scrapethissite.com",
+    "executionTargets": []
+  }
+]

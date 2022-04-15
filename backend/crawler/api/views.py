@@ -3,10 +3,11 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
 from django.db import transaction, DatabaseError, IntegrityError
+from django.core.paginator import Paginator
 
 import json
 
-from .serializers import *
+from django.core import serializers
 from core.model.DataModel import *
 
 
@@ -24,6 +25,7 @@ def add_record(request):
         if 'tags' in request.data:
             tags = [Tag.objects.create_tag(record, tag.strip()) for tag in request.data['tags'].split(',')]
         with transaction.atomic():
+            # atomic to preserve consistency
             record.save()
             for tag in tags:
                 tag.save()
@@ -34,12 +36,35 @@ def add_record(request):
 
 @api_view(['DELETE'])
 def delete_record(request):
-    pass
+    ...
 
 
 @api_view(['GET'])
-def get_records(request):
-    pass
+def get_records(request, page):
+    page_size = 10
+    page_num = 1
+    try:
+        page_num = int(page)
+    except ValueError:
+        # int parsing error
+        pass
+
+    if 'page_size' in request.data:
+        try:
+            page_size = int(request.data['page_size'])
+        except ValueError:
+            # int parsing error
+            pass
+    JSONserializer = serializers.get_serializer("json")
+    serializer = JSONserializer()
+
+    records = Paginator(WebsiteRecord.objects.all(), page_size)
+    response_dict = json.loads(serializer.serialize(records.page(page_num)))
+    response_dict = {'records': response_dict}
+    print(type(response_dict))
+    response_dict['total_pages'] = records.num_pages
+    response_dict['total_records'] = records.count
+    return Response(response_dict)
 
 
 @api_view(['GET'])

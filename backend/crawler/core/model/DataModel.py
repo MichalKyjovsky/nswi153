@@ -6,6 +6,9 @@ class WebsiteRecord(models.Model):
     """
     Represents a single website crawling record - instructions for crawling.
     """
+    class Meta:
+        ordering = ('label', 'interval')
+
     STATUS = ((1, 'Active'), (0, 'Inactive'))
     url = models.CharField(max_length=256)
     label = models.CharField(max_length=64)
@@ -30,6 +33,9 @@ class Execution(models.Model):
     """
     Represents a single web crawler execution of the :class: `WebsiteRecord`.
     """
+    class Meta:
+        ordering = ('title', 'url')
+
     title = models.CharField(max_length=72)
     url = models.CharField(max_length=2048)
     crawl_time = models.DateTimeField()

@@ -24,7 +24,7 @@ COPY ./crawler /usr/src/backend/crawler
 RUN flake8 --ignore=E501,F401,W293,F541,E266 /usr/src/backend/crawler
 
 # Install Python dependencies
-RUN pip pip wheel --no-cache-dir --no-deps --wheel-dir /usr/src/backend/wheels /usr/src/backend/crawler/requirements.txt
+RUN pip wheel --no-cache-dir --no-deps --wheel-dir /usr/src/backend/wheels /usr/src/backend/crawler/requirements.txt
 
 
 ###########################################

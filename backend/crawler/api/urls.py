@@ -8,5 +8,7 @@ urlpatterns = [
     path('record/<page>/', views.get_records, name='get records'),
     path('execution/', views.get_executions, name='get executions'),
     path('execution/<execution>/', views.get_execution, name='get execution'),
-    path('stats/', views.get_stats, name='get statistics')
+    path('stats/', views.get_stats, name='get statistics'),
+    path('activate/<record>/', views.activate, name='activate record'),
+    path('deactivate/<record>/', views.deactivate, name='deactivate record')
 ]

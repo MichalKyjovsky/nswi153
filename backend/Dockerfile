@@ -24,7 +24,7 @@ COPY ./crawler /usr/src/backend/crawler
 RUN flake8 --ignore=E501,F401,W293,F541,E266 /usr/src/backend/crawler
 
 # Install Python dependencies
-RUN pip wheel --no-cache-dir --no-deps --wheel-dir /usr/src/backend/wheels /usr/src/backend/crawler/requirements.txt
+RUN pip wheel --no-cache-dir --no-deps --wheel-dir /usr/src/backend/wheels -r /usr/src/backend/crawler/requirements.txt
 
 
 ###########################################
@@ -35,15 +35,15 @@ RUN pip wheel --no-cache-dir --no-deps --wheel-dir /usr/src/backend/wheels /usr/
 FROM python:3
 
 # Create a directory for application user
-RUN mkdir -p /home/crawler
+RUN mkdir -p /home/backend
 
 # Create the application user
 RUN addgroup --system app
 RUN adduser --system --group app
 
 # Create the appropriate directories
-ENV HOME=/home
-ENV APP_HOME=/home/crawler
+ENV HOME=/home/backend
+ENV APP_HOME=/home/backend/crawler
 RUN mkdir $APP_HOME
 WORKDIR $APP_HOME
 

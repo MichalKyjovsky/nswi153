@@ -1,4 +1,4 @@
-name: Backend Docker Image - Build
+name: Frontend Docker Image - Build
 
 on:
   push:

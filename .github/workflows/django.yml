@@ -29,4 +29,4 @@ jobs:
     - name: Run Tests
       working-directory: ./backend/crawler
       run: |
-        python manage.py test
+        python manage.py test --pattern="*_testsuite.py"

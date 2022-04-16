@@ -104,14 +104,49 @@ def get_records(request, page):
     return Response(response_dict)
 
 
-@api_view(['GET'])
-def get_executions(request):
+@api_view(['POST'])
+def update_record(request):
     pass
 
 
 @api_view(['GET'])
-def get_execution(request, execution):
+def get_executions(request, page):
+    page_size = 10
+    page_num = 1
+    try:
+        page_num = int(page)
+    except ValueError:
+        # int parsing error
+        pass
+
+    if 'page_size' in request.data:
+        try:
+            page_size = int(request.data['page_size'])
+        except ValueError:
+            # int parsing error
+            pass
     pass
+
+    JSONserializer = serializers.get_serializer("json")
+    serializer = JSONserializer()
+    executions = Paginator(Execution.objects.all(), page_size)
+    response_dict = json.loads(serializer.serialize(executions.page(page_num)))
+    response_dict = {'executions': response_dict}
+
+    response_dict['total_pages'] = executions.num_pages
+    response_dict['total_records'] = executions.count
+    return Response(response_dict)
+
+
+@api_view(['GET'])
+def get_execution(request, record):
+    JSONserializer = serializers.get_serializer("json")
+    serializer = JSONserializer()
+    execution = Execution.objects.filter(id=record)
+    if len(execution) == 0:
+        return Response({"error": f"Execution with ID {record} was not found!"})
+    response_dict = json.loads(serializer.serialize(execution))
+    return Response(response_dict)
 
 
 @api_view(['GET'])

@@ -12,4 +12,3 @@ class CrawlerWorksCorrectlyTestCase(TestCase):
         with open(Path(__file__).parent.joinpath('test.json'), mode="rt") as vp:
             vps = json.load(vp)
             self.assertEqual(vps, rs)
-

@@ -39,6 +39,8 @@ INSTALLED_APPS = [
     'drf_yasg',
     'core',
     'api'
+    "django.contrib.staticfiles",  # Required for GraphiQL
+    "graphene_django"
 ]
 
 MIDDLEWARE = [
@@ -132,3 +134,8 @@ STATIC_URL = '/static/'
 # https://docs.djangoproject.com/en/3.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# GraphQL Configuration
+GRAPHENE = {
+    "SCHEMA": "core.schema.schema"
+}

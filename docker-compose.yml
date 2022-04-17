@@ -9,6 +9,7 @@ services:
       - POSTGRES_DB=postgres
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
+
   frontend:
     build:
         context: ./frontend
@@ -20,13 +21,14 @@ services:
       - "3000:3000"
     environment:
       - CHOKIDAR_USEPOLLING=true
+
   backend:
     build:
         context: ./backend
         dockerfile: Dockerfile
     command: python manage.py runserver 0.0.0.0:8000 # On production change for Uvicorn
     volumes:
-      - ./backend/crawler:/crawler
+      - ./backend/crawler:/usr/src/backend/crawler
     ports:
       - "8000:8000"
     environment:
@@ -35,3 +37,23 @@ services:
       - POSTGRES_PASSWORD=postgres
     depends_on:
       - db
+
+  celery:
+    build:
+        context: ./backend
+        dockerfile: Dockerfile
+    command: celery worker --app=core --loglevel=info
+    volumes:
+      - ./backend/crawler:/usr/src/backend/crawler
+    environment:
+      - DEBUG=1
+      - SECRET_KEY=dbaa1_i7%*3r9-=z-+_mz4r-!qeed@(-a_r(g@k8jo8y3r27%m
+      - DJANGO_ALLOWED_HOSTS=localhost 127.0.0.1 [::1]
+      - CELERY_BROKER=redis://redis:6379/0
+      - CELERY_BACKEND=redis://redis:6379/0
+    depends_on:
+      - backend
+      - redis
+
+  redis:
+    image: redis:6-alpine

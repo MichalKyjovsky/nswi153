@@ -63,6 +63,7 @@ def delete_record(request):
         return Response({"error": "Could not find and delete selected record."})
     return Response({"error": "No Website Record ID for deleting provided!"})
 
+
 @api_view(['GET'])
 def get_records(request, page):
     """
@@ -226,7 +227,8 @@ def load_and_filter_records(request):
         records = records.filter(label=request.query_params.get('label-filter'))
 
     if 'tag-filter' in request.query_params and request.query_params.get('tag-filter') is not None:
-        records = [record for record in records if has_tag(record.tag_set.all(), request.query_params.get('tag-filter'))]
+        records = [record for record in records if
+                   has_tag(record.tag_set.all(), request.query_params.get('tag-filter'))]
 
     return records
 
@@ -240,11 +242,11 @@ def get_tags(records):
     record_tags = dict()
 
     for record in records:
-        id = record.pk
-        l = []
+        record_id = record.pk
+        record_list = []
         for tag in record.tag_set.all():
-            l.append(tag.tag)
-        record_tags[id] = l
+            record_list.append(tag.tag)
+        record_tags[record_id] = record_list
 
     return record_tags
 

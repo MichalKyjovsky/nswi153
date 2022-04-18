@@ -29,5 +29,6 @@ jobs:
     - name: Run Tests
       working-directory: ./backend/crawler
       run: |
+        python manage.py makemigrations
         python manage.py migrate
         python manage.py test --pattern="*_testsuite.py"

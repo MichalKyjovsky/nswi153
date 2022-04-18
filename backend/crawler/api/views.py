@@ -61,7 +61,7 @@ def delete_record(request):
             record.delete()
             return Response({"message": "Record deleted successfully!"})
         return Response({"error": "Could not find and delete selected record."})
-
+    return Response({"error": "No Website Record ID for deleting provided!"})
 
 @api_view(['GET'])
 def get_records(request, page):
@@ -75,6 +75,8 @@ def get_records(request, page):
     records = load_and_filter_records(request)
     record_tags = get_tags(records)
     response_dict = serialize_data(records, "records", page_size, page_num)
+    if type(response_dict) == Response:
+        return response_dict
     response_dict = add_tags(response_dict, record_tags)
     return Response(response_dict)
 
@@ -100,10 +102,12 @@ def get_executions(request, page):
     page_size, page_num = get_page_data(request, page)
     executions = Execution.objects.all().select_related()
     response_data = serialize_data(executions, "executions", page_size, page_num)
+    if type(response_data) == Response:
+        return response_data
     link_counts = dict()
     for execution in executions:
         id = execution.pk
-        link_counts = len(execution.executionlink_set)
+        link_counts[id] = len(execution.executionlink_set.all())
     for execution in response_data['executions']:
         id = execution['pk']
         if id in response_data:
@@ -114,19 +118,25 @@ def get_executions(request, page):
 
 
 @api_view(['GET'])
-def get_execution(request, record):
+def get_execution(request, record, page):
     """
-    Retrieves the details about a certains :class: `Execution`.
+    Retrieves the details about a certain :class: `Execution`.
     @param request: the request that for routed to this API endpoint
     @param record: the record whose executions we want to
+    @param page: the page to be displayed
     @return: the request response
     """
-    JSONserializer = serializers.get_serializer("json")
-    serializer = JSONserializer()
-    execution = Execution.objects.filter(website_record=record)
-    if len(execution) == 0:
+    page_size, page_num = get_page_data(request, page)
+    try:
+        record_id = int(record)
+    except ValueError:
+        return Response({"error": f"Invalid Website Record ID {id}: an integer expect!"})
+    executions = Execution.objects.filter(website_record=record_id)
+    if len(executions) == 0:
         return Response({"error": f"Executions for Website Record ID {record} were not found!"})
-    response_dict = json.loads(serializer.serialize(execution))
+    response_dict = serialize_data(executions, "executions", page_size, page_num)
+    if type(response_dict) == Response:
+        return response_dict
     return Response(response_dict)
 
 
@@ -192,9 +202,9 @@ def get_page_data(request, page):
         # int parsing error
         pass
 
-    if 'page_size' in request.data:
+    if 'page_size' in request.query_params:
         try:
-            page_size = int(request.data['page_size'])
+            page_size = int(request.query_params.get('page_size'))
         except ValueError:
             # int parsing error
             pass
@@ -209,14 +219,14 @@ def load_and_filter_records(request):
     """
     records = WebsiteRecord.objects.all().select_related()
 
-    if 'url-filter' in request.data and request.data['url-filter'] is not None:
-        records = records.filter(url=request.data['url-filter'])
+    if 'url-filter' in request.query_params and request.query_params.get('url-filter') is not None:
+        records = records.filter(url=request.query_params.get('url-filter'))
 
-    if 'label-filter' in request.data and request.data['label-filter'] is not None:
-        records = records.filter(label=request.data['label-filter'])
+    if 'label-filter' in request.query_params and request.query_params.get('label-filter') is not None:
+        records = records.filter(label=request.query_params.get('label-filter'))
 
-    if 'tag-filter' in request.data and request.data['tag-filter'] is not None:
-        records = [record for record in records if has_tag(record.tag_set.all(), request.data['tag-filter'])]
+    if 'tag-filter' in request.query_params and request.query_params.get('tag-filter') is not None:
+        records = [record for record in records if has_tag(record.tag_set.all(), request.query_params.get('tag-filter'))]
 
     return records
 
@@ -251,6 +261,8 @@ def serialize_data(records, key, page_size, page_num):
     JSONserializer = serializers.get_serializer("json")
     serializer = JSONserializer()
     records = Paginator(records, page_size)
+    if page_num > records.num_pages or page_num < 1:
+        return Response({"error": f"Invalid page {page_num}!"})
     response_dict = json.loads(serializer.serialize(records.page(page_num)))
     response_dict = {key: response_dict, 'total_pages': records.num_pages, 'total_records': records.count}
     return response_dict
@@ -278,10 +290,14 @@ def do_activation(record, value, log):
     @param log: log message
     @return: response to the request
     """
-    record = WebsiteRecord.objects.filter(id=record)
+    try:
+        record_id = int(record)
+    except ValueError:
+        return Response({"error": f"Invalid Website Record ID {record}: an integer expect!"})
+    record = WebsiteRecord.objects.filter(id=record_id)
     if len(record) < 1:
-        return Response({"error": f"Website Record with ID {record} was not found! The record was not {log}."})
+        return Response({"error": f"Website Record with ID {record_id} was not found! The record was not {log}."})
     record = record[0]
     record.status = value
     record.save()
-    return Response({"error": f"Website Record with ID {record} was {log}."})
+    return Response({"message": f"Website Record with ID {record_id} was {log}."})

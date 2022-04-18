@@ -1,0 +1,202 @@
+[
+  {
+    "model": "core.websiterecord",
+    "pk": 5,
+    "fields": {
+      "url": "http://www.google.com",
+      "label": "my_label",
+      "interval": 120,
+      "status": 1,
+      "regex": ".*"
+    }
+  },
+  {
+    "model": "core.websiterecord",
+    "pk": 6,
+    "fields": {
+      "url": "http://www.amazon.com",
+      "label": "amazon_crawl",
+      "interval": 100,
+      "status": 0,
+      "regex": "www.amazon.com.*"
+    }
+  },
+  {
+    "model": "core.tag",
+    "pk": 10,
+    "fields": {
+      "tag": "1",
+      "website_record": 5
+    }
+  },
+  {
+    "model": "core.tag",
+    "pk": 11,
+    "fields": {
+      "tag": "2",
+      "website_record": 5
+    }
+  },
+  {
+    "model": "core.tag",
+    "pk": 12,
+    "fields": {
+      "tag": "3",
+      "website_record": 5
+    }
+  },
+  {
+    "model": "core.tag",
+    "pk": 10,
+    "fields": {
+      "tag": "a",
+      "website_record": 6
+    }
+  },
+  {
+    "model": "core.tag",
+    "pk": 11,
+    "fields": {
+      "tag": "b",
+      "website_record": 6
+    }
+  },
+  {
+    "model": "core.tag",
+    "pk": 12,
+    "fields": {
+      "tag": "c",
+      "website_record": 6
+    }
+  },
+  {
+    "model": "core.execution",
+    "pk": 11,
+    "fields": {
+      "title": "Google browser",
+      "url": "www.google.com",
+      "crawl_time": "2022-04-15T14:30:59+01:00",
+      "website_record": 5
+    }
+  },
+  {
+    "model": "core.execution",
+    "pk": 13,
+    "fields": {
+      "title": "Google browser",
+      "url": "www.google.com",
+      "crawl_time": "2022-04-16T14:30:59+01:00",
+      "website_record": 5
+    }
+  },
+  {
+    "model": "core.execution",
+    "pk": 14,
+    "fields": {
+      "title": "Google browser",
+      "url": "www.google.com",
+      "crawl_time": "2022-04-17T14:30:59+01:00",
+      "website_record": 5
+    }
+  },
+  {
+    "model": "core.execution",
+    "pk": 15,
+    "fields": {
+      "title": "Amazon purchases",
+      "url": "www.amazon.com",
+      "crawl_time": "2022-04-15T15:30:00+01:00",
+      "website_record": 6
+    }
+  },
+  {
+    "model": "core.execution",
+    "pk": 16,
+    "fields": {
+      "title": "Amazon purchases",
+      "url": "www.amazon.com",
+      "crawl_time": "2022-04-15T15:30:00+01:00",
+      "website_record": 6
+    }
+  },
+  {
+    "model": "core.executionlink",
+    "pk": 17,
+    "fields": {
+      "url": "www.google.com",
+      "execution": 11
+    }
+  },
+  {
+    "model": "core.executionlink",
+    "pk": 18,
+    "fields": {
+      "url": "www.google.com/search",
+      "execution": 11
+    }
+  },
+  {
+    "model": "core.executionlink",
+    "pk": 19,
+    "fields": {
+      "url": "www.google.com",
+      "execution": 13
+    }
+  },
+  {
+    "model": "core.executionlink",
+    "pk": 20,
+    "fields": {
+      "url": "www.google.com/search",
+      "execution": 13
+    }
+  },
+  {
+    "model": "core.executionlink",
+    "pk": 21,
+    "fields": {
+      "url": "www.google.com",
+      "execution": 14
+    }
+  },
+  {
+    "model": "core.executionlink",
+    "pk": 22,
+    "fields": {
+      "url": "www.google.com/search",
+      "execution": 14
+    }
+  },
+  {
+    "model": "core.executionlink",
+    "pk": 23,
+    "fields": {
+      "url": "www.amazon.com",
+      "execution": 15
+    }
+  },
+  {
+    "model": "core.executionlink",
+    "pk": 24,
+    "fields": {
+      "url": "www.amazon.com/find",
+      "execution": 15
+    }
+  },
+  {
+    "model": "core.executionlink",
+    "pk": 25,
+    "fields": {
+      "url": "www.amazon.com",
+      "execution": 16
+    }
+  },
+  {
+    "model": "core.executionlink",
+    "pk": 26,
+    "fields": {
+      "url": "www.amazon.com/find",
+      "execution": 16
+    }
+  }
+]

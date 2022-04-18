@@ -1,6 +1,7 @@
 from django.test import TestCase
 from core.model.DataModel import WebsiteRecord
 
+
 class DeleteactivateRecordTest(TestCase):
     fixtures = ['basic.json']
 

@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/3.2/ref/settings/
 """
 
 from pathlib import Path
+import os
 
 # Workaround for version issues with Django 4 and Graphene
 import django
@@ -153,3 +154,7 @@ CORS_ALLOW_CREDENTIALS = True
 #     'http://localhost:3000',
 # ]  # If this is used, then not need to use `CORS_ALLOW_ALL_ORIGINS = True`
 CORS_URLS_REGEX = r'^/api/.*$'
+
+CELERY_BROKER_URL = os.environ.get("CELERY_BROKER", "redis://redis:6379/0")
+CELERY_BROKER_URL = os.environ.get("CELERY_BROKER", "redis://redis:6379/0")
+CELERY_RESULT_BACKEND = os.environ.get("CELERY_BROKER", "redis://redis:6379/0")

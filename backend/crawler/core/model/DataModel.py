@@ -1,16 +1,22 @@
 from django.db import models
+from .DataModelManager import *
 
 
 class WebsiteRecord(models.Model):
     """
     Represents a single website crawling record - instructions for crawling.
     """
+    class Meta:
+        ordering = ('label', 'interval')
+
     STATUS = ((1, 'Active'), (0, 'Inactive'))
     url = models.CharField(max_length=256)
     label = models.CharField(max_length=64)
     interval = models.IntegerField()
     status = models.IntegerField(choices=STATUS)
     regex = models.CharField(max_length=128)
+
+    objects = WebsiteRecordManager()
 
 
 class Tag(models.Model):
@@ -20,11 +26,16 @@ class Tag(models.Model):
     tag = models.CharField(max_length=64)
     website_record = models.ForeignKey(WebsiteRecord, on_delete=models.CASCADE)
 
+    objects = TagManager()
+
 
 class Execution(models.Model):
     """
     Represents a single web crawler execution of the :class: `WebsiteRecord`.
     """
+    class Meta:
+        ordering = ('title', 'url')
+
     title = models.CharField(max_length=72)
     url = models.CharField(max_length=2048)
     crawl_time = models.DateTimeField()

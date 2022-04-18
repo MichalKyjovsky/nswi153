@@ -40,7 +40,7 @@ def add_record(request):
             for tag in tags:
                 tag.save()
         return Response({"message": f"Record and its tags created successfully! (1 record, {len(tags)} tags)"})
-    except (ValueError, DatabaseError, IntegrityError, transaction.TransactionManagementError) as e:
+    except (ValueError, DatabaseError, IntegrityError, transaction.TransactionManagementError):
         return Response({"error": "Invalid record parameters entered!"})
 
 

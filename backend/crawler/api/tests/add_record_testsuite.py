@@ -1,5 +1,5 @@
 from django.test import TestCase
-from core.model.DataModel import WebsiteRecord, Tag
+from ..models import WebsiteRecord, Tag
 
 
 class AddRecordTest(TestCase):

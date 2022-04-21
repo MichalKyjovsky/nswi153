@@ -1,6 +1,6 @@
 [
   {
-    "model": "core.websiterecord",
+    "model": "api.websiterecord",
     "pk": 5,
     "fields": {
       "url": "http://www.google.com",
@@ -11,7 +11,7 @@
     }
   },
   {
-    "model": "core.websiterecord",
+    "model": "api.websiterecord",
     "pk": 6,
     "fields": {
       "url": "http://www.amazon.com",
@@ -22,7 +22,7 @@
     }
   },
   {
-    "model": "core.tag",
+    "model": "api.tag",
     "pk": 10,
     "fields": {
       "tag": "1",
@@ -30,7 +30,7 @@
     }
   },
   {
-    "model": "core.tag",
+    "model": "api.tag",
     "pk": 11,
     "fields": {
       "tag": "2",
@@ -38,7 +38,7 @@
     }
   },
   {
-    "model": "core.tag",
+    "model": "api.tag",
     "pk": 12,
     "fields": {
       "tag": "3",
@@ -46,7 +46,7 @@
     }
   },
   {
-    "model": "core.tag",
+    "model": "api.tag",
     "pk": 10,
     "fields": {
       "tag": "a",
@@ -54,7 +54,7 @@
     }
   },
   {
-    "model": "core.tag",
+    "model": "api.tag",
     "pk": 11,
     "fields": {
       "tag": "b",
@@ -62,7 +62,7 @@
     }
   },
   {
-    "model": "core.tag",
+    "model": "api.tag",
     "pk": 12,
     "fields": {
       "tag": "c",
@@ -70,7 +70,7 @@
     }
   },
   {
-    "model": "core.execution",
+    "model": "api.execution",
     "pk": 11,
     "fields": {
       "title": "Google browser",
@@ -80,7 +80,7 @@
     }
   },
   {
-    "model": "core.execution",
+    "model": "api.execution",
     "pk": 13,
     "fields": {
       "title": "Google browser",
@@ -90,7 +90,7 @@
     }
   },
   {
-    "model": "core.execution",
+    "model": "api.execution",
     "pk": 14,
     "fields": {
       "title": "Google browser",
@@ -100,7 +100,7 @@
     }
   },
   {
-    "model": "core.execution",
+    "model": "api.execution",
     "pk": 15,
     "fields": {
       "title": "Amazon purchases",
@@ -110,7 +110,7 @@
     }
   },
   {
-    "model": "core.execution",
+    "model": "api.execution",
     "pk": 16,
     "fields": {
       "title": "Amazon purchases",
@@ -120,7 +120,7 @@
     }
   },
   {
-    "model": "core.executionlink",
+    "model": "api.executionlink",
     "pk": 17,
     "fields": {
       "url": "www.google.com",
@@ -128,7 +128,7 @@
     }
   },
   {
-    "model": "core.executionlink",
+    "model": "api.executionlink",
     "pk": 18,
     "fields": {
       "url": "www.google.com/search",
@@ -136,7 +136,7 @@
     }
   },
   {
-    "model": "core.executionlink",
+    "model": "api.executionlink",
     "pk": 19,
     "fields": {
       "url": "www.google.com",
@@ -144,7 +144,7 @@
     }
   },
   {
-    "model": "core.executionlink",
+    "model": "api.executionlink",
     "pk": 20,
     "fields": {
       "url": "www.google.com/search",
@@ -152,7 +152,7 @@
     }
   },
   {
-    "model": "core.executionlink",
+    "model": "api.executionlink",
     "pk": 21,
     "fields": {
       "url": "www.google.com",
@@ -160,7 +160,7 @@
     }
   },
   {
-    "model": "core.executionlink",
+    "model": "api.executionlink",
     "pk": 22,
     "fields": {
       "url": "www.google.com/search",
@@ -168,7 +168,7 @@
     }
   },
   {
-    "model": "core.executionlink",
+    "model": "api.executionlink",
     "pk": 23,
     "fields": {
       "url": "www.amazon.com",
@@ -176,7 +176,7 @@
     }
   },
   {
-    "model": "core.executionlink",
+    "model": "api.executionlink",
     "pk": 24,
     "fields": {
       "url": "www.amazon.com/find",
@@ -184,7 +184,7 @@
     }
   },
   {
-    "model": "core.executionlink",
+    "model": "api.executionlink",
     "pk": 25,
     "fields": {
       "url": "www.amazon.com",
@@ -192,7 +192,7 @@
     }
   },
   {
-    "model": "core.executionlink",
+    "model": "api.executionlink",
     "pk": 26,
     "fields": {
       "url": "www.amazon.com/find",

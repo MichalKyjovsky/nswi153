@@ -1,5 +1,5 @@
 from django.test import TestCase
-from core.model.DataModel import WebsiteRecord
+from ..models import WebsiteRecord
 
 
 class DeactivateRecordTest(TestCase):

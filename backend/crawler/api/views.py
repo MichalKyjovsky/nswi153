@@ -4,10 +4,8 @@ from rest_framework.response import Response
 from django.db import transaction, DatabaseError, IntegrityError
 from django.core.paginator import Paginator
 
-import json
-
 from django.core import serializers
-from core.model.DataModel import *
+from .models import *
 
 
 @api_view(['GET'])
@@ -67,7 +65,8 @@ def delete_record(request):
 @api_view(['GET'])
 def get_records(request, page):
     """
-    Retrieves all :class: `WebsiteRecord` objects, returns a paginated list (page parameterized by the `page` parameter).
+    Retrieves all :class: `WebsiteRecord` objects, returns a paginated list
+    (page parameterized by the `page` parameter).
     @param request: the request that for routed to this API endpoint
     @param page: the page of the returned objects to display
     @return: the request response
@@ -107,12 +106,12 @@ def get_executions(request, page):
         return response_data
     link_counts = dict()
     for execution in executions:
-        id = execution.pk
-        link_counts[id] = len(execution.executionlink_set.all())
+        execution_id = execution.pk
+        link_counts[execution_id] = len(execution.executionlink_set.all())
     for execution in response_data['executions']:
-        id = execution['pk']
-        if id in response_data:
-            execution['links'] = len(response_data[id])
+        execution_id = execution['pk']
+        if execution_id in response_data:
+            execution['links'] = len(response_data[execution_id])
         else:
             execution['links'] = 0
     return Response(response_data)
@@ -156,6 +155,7 @@ def activate(request, record):
     """
     Activates a :class: `WebsiteRecord`.
     @param request: the request that for routed to this API endpoint
+    @param record: the ID of the record to be activated
     @return: the request response
     @return: the request response
     """

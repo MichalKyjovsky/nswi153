@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from core.model.DataModel import *
+from .models import *
 
 
 class WebsiteRecordSerializer(serializers.HyperlinkedModelSerializer):

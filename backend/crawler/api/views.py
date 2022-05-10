@@ -45,12 +45,12 @@ def get_graph(request, record):
         required=['url', 'label', 'interval', 'status', 'regex'],
         properties={
             'url': openapi.Schema(type=openapi.TYPE_STRING,
-                                  description="The URL where the crawler shall start. " +
-                                              "Must be between 1 and 255 characters long.",
+                                  description="The URL where the crawler shall start. "
+                                              + "Must be between 1 and 255 characters long.",
                                   example="http://www.crawler.com"),
             'label': openapi.Schema(type=openapi.TYPE_STRING,
-                                    description="The label of the to-be-created `WebsiteRecord`. " +
-                                                "1-2563 characters long.",
+                                    description="The label of the to-be-created `WebsiteRecord`. "
+                                                + "1-2563 characters long.",
                                     example="My first website record"),
             'interval': openapi.Schema(type=openapi.TYPE_INTEGER,
                                        description="Crawling interval (in seconds). Must be be a non-negative integer.",
@@ -59,8 +59,8 @@ def get_graph(request, record):
                                      description="One of the values: 0 (deactivated) or 1 (activated).",
                                      example=1),
             'regex': openapi.Schema(type=openapi.TYPE_STRING,
-                                    description="A non-empty regex to define the URLs to be crawled next. " +
-                                                "If everything should be matched, use `.*`.",
+                                    description="A non-empty regex to define the URLs to be crawled next. "
+                                                + "If everything should be matched, use `.*`.",
                                     example="crawler.com"),
             'tags': openapi.Schema(type=openapi.TYPE_STRING,
                                    description="A comma-separated list of the `WebsiteRecord`'s tags.",
@@ -169,8 +169,8 @@ def delete_record(request):
                                                                                      "label": "my_label",
                                                                                      "interval": 120, "status": 1,
                                                                                      "regex": ".*"}, "tags": []}],
-                                                                                       "total_pages": 1,
-                                                                                       "total_records": 2}}),
+            "total_pages": 1,
+            "total_records": 2}}),
         400: openapi.Response('Requested page of the list is invalid. ' + SEE_ERROR)
     },
     tags=['Website Record'])

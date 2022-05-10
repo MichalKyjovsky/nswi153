@@ -74,9 +74,6 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'crawler.wsgi.application'
 
-# Necessary for Django-Swagger API Documentation generating
-REST_FRAMEWORK = {'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema'}
-
 SPECTACULAR_SETTINGS = {
     'TITLE': 'Web Crawler API',
     'DESCRIPTION': 'API for a simple web crawler implementation',

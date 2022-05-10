@@ -37,6 +37,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
+    'drf_yasg',
     'core',
     'api'
 ]
@@ -65,12 +66,25 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
             ],
+            'libraries': {
+                'staticfiles': 'django.templatetags.static',
+            }
         },
     },
 ]
 
 WSGI_APPLICATION = 'crawler.wsgi.application'
 
+# Necessary for Django-Swagger API Documentation generating
+REST_FRAMEWORK = { 'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema' }
+
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'Web Crawler API',
+    'DESCRIPTION': 'API for a simple web crawler implementation',
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,
+    # OTHER SETTINGS
+}
 
 # Database
 # https://docs.djangoproject.com/en/3.2/ref/settings/#databases

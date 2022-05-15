@@ -4,7 +4,6 @@
     "domain": "gum.co",
     "executionTargets": [
       "https://gum.co/oLpqb?wanted=true",
-      "https://gumroad.com",
       "https://scrapethissite.com/",
       "https://scrapethissite.com/faq/",
       "https://scrapethissite.com/lessons/",
@@ -17,18 +16,12 @@
     "domain": "gum.co",
     "executionTargets": [
       "https://gum.co/oLpqb/LASTCHANCE?wanted=true",
-      "https://gumroad.com",
       "https://scrapethissite.com/",
       "https://scrapethissite.com/faq/",
       "https://scrapethissite.com/lessons/",
       "https://scrapethissite.com/login/",
       "https://scrapethissite.com/pages/"
     ]
-  },
-  {
-    "url": "https://gumroad.com",
-    "domain": "gumroad.com",
-    "executionTargets": []
   },
   {
     "url": "https://scrapethissite.com/",

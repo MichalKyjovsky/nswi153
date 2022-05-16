@@ -1,6 +1,5 @@
 import * as React from 'react';
 import Box from '@mui/material/Box';
-import Toolbar from '@mui/material/Toolbar';
 import Container from '@mui/material/Container';
 import Paper from '@mui/material/Paper';
 import Table from '@mui/material/Table';
@@ -11,19 +10,13 @@ import TableContainer from '@mui/material/TableContainer';
 import TableFooter from '@mui/material/TableFooter';
 import TablePagination from '@mui/material/TablePagination';
 import TableRow from '@mui/material/TableRow';
-import IconButton from '@mui/material/IconButton';
 import TablePaginationActions from './TablePaginationActions';
 import Checkbox from '@mui/material/Checkbox';
 import TableSortLabel from '@mui/material/TableSortLabel';
 import { visuallyHidden } from '@mui/utils';
-import { alpha } from '@mui/material/styles';
-import Typography from '@mui/material/Typography';
-import Tooltip from '@mui/material/Tooltip';
-import Stack from '@mui/material/Stack';
-import DeleteIcon from '@mui/icons-material/Delete';
 import FilterListIcon from '@mui/icons-material/FilterList';
-import Addicon from '@mui/icons-material/Add';
 import TextField from '@mui/material/TextField';
+import SitesToolbar from './SitesToolbar';
 
 interface Data {
     url: string;
@@ -130,7 +123,7 @@ const headCells: readonly HeadCell[] = [
     },
 ];
 
-interface EnhancedTableProps {
+interface SitesTableHeadProps {
     numSelected: number;
     onRequestSort: (event: React.MouseEvent<unknown>, property: keyof Data) => void;
     onSelectAllClick: (event: React.ChangeEvent<HTMLInputElement>) => void;
@@ -140,13 +133,11 @@ interface EnhancedTableProps {
     filterListShown: boolean;
 }
 
-function EnhancedTableHead(props: EnhancedTableProps) {
-    const { onSelectAllClick, order, orderBy, numSelected, rowCount, onRequestSort, filterListShown } =
-        props;
-    const createSortHandler =
-        (property: keyof Data) => (event: React.MouseEvent<unknown>) => {
-            onRequestSort(event, property);
-        };
+function SitesTableHead(props: SitesTableHeadProps) {
+    const { onSelectAllClick, order, orderBy, numSelected, rowCount, onRequestSort, filterListShown } = props;
+    const createSortHandler = (property: keyof Data) => (event: React.MouseEvent<unknown>) => {
+        onRequestSort(event, property);
+    };
 
     return (
         <TableHead>
@@ -197,76 +188,6 @@ function EnhancedTableHead(props: EnhancedTableProps) {
     );
 }
 
-interface EnhancedTableToolbarProps {
-    numSelected: number;
-    toggleFilterList: React.Dispatch<React.SetStateAction<boolean>>;
-}
-
-const EnhancedTableToolbar = (props: EnhancedTableToolbarProps) => {
-    const { numSelected, toggleFilterList } = props;
-    const [filterListShown, setFilterListShown] = React.useState(false);
-
-    return (
-        <Toolbar
-            sx={{
-                pl: { sm: 2 },
-                pr: { xs: 1, sm: 1 },
-                ...(numSelected > 0 && {
-                    bgcolor: (theme) =>
-                        alpha(theme.palette.primary.main, theme.palette.action.activatedOpacity),
-                }),
-            }}
-        >
-            {numSelected > 0 ? (
-                <Typography
-                    sx={{ flex: '1 1 100%' }}
-                    color="inherit"
-                    variant="subtitle1"
-                    component="div"
-                >
-                    {numSelected} selected
-                </Typography>
-            ) : (
-                <Typography
-                    sx={{ flex: '1 1 100%' }}
-                    variant="h6"
-                    id="tableTitle"
-                    component="h1"
-                    color="primary"
-                >
-                    Sites
-                </Typography>
-            )}
-            <Stack direction="row" spacing={2}>
-                {numSelected === 0 ? (
-                    <React.Fragment>
-                        <Tooltip title="Filter list">
-                            <IconButton onClick={() => {
-                                let toggled = !filterListShown;
-                                toggleFilterList(toggled);
-                                setFilterListShown(toggled);
-                            }}>
-                                <FilterListIcon />
-                            </IconButton>
-                        </Tooltip>
-                        <Tooltip title="Add new website">
-                            <IconButton>
-                                <Addicon />
-                            </IconButton>
-                        </Tooltip>
-                    </React.Fragment>
-                ) :
-                    <Tooltip title="Delete">
-                        <IconButton>
-                            <DeleteIcon />
-                        </IconButton>
-                    </Tooltip>
-                }
-            </Stack>
-        </Toolbar>
-    );
-};
-
 function SitesContent() {
     const [page, setPage] = React.useState(0);
     const [rowsPerPage, setRowsPerPage] = React.useState(5);
@@ -289,7 +210,7 @@ function SitesContent() {
     const [order, setOrder] = React.useState<Order>('asc');
     const [orderBy, setOrderBy] = React.useState<keyof Data>('label');
     const [selected, setSelected] = React.useState<readonly string[]>([]);
-    const [dense, setDense] = React.useState(false);
+    const [dense, setDense] = React.useState(true);
 
 
     const handleRequestSort = (
@@ -338,20 +259,17 @@ function SitesContent() {
             <Box
                 component="main"
                 sx={{
-                    backgroundColor: (theme) =>
-                        theme.palette.mode === 'light'
-                            ? theme.palette.grey[100]
-                            : theme.palette.grey[900],
+                    backgroundColor: (theme) => theme.palette.grey[100],
                     flexGrow: 1,
                     height: '100vh',
                     overflow: 'auto',
                 }}
             >
                 <Container maxWidth="lg" sx={{ mt: 2, mb: 2 }}>
-                    <EnhancedTableToolbar numSelected={selected.length} toggleFilterList={setFilterListShown} />
+                    <SitesToolbar numSelected={selected.length} toggleFilterList={setFilterListShown} />
                     <TableContainer component={Paper} >
                         <Table sx={{ minWidth: 500 }} aria-label="custom pagination table">
-                            <EnhancedTableHead
+                            <SitesTableHead
                                 numSelected={selected.length}
                                 order={order}
                                 orderBy={orderBy}

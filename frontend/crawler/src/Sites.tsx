@@ -1,4 +1,6 @@
 import * as React from 'react';
+import axios from 'axios';
+import { AxiosInstance, AxiosResponse } from 'axios';
 import Box from '@mui/material/Box';
 import Container from '@mui/material/Container';
 import Paper from '@mui/material/Paper';
@@ -42,10 +44,10 @@ function createData(
     };
 }
 
-let rows: Data[] = [];
-for (let i = 0; i < 20; i++) {
-    rows.push(createData('example.org', 'Example', 42, true, "./*"));
-}
+// let rows: Data[] = [];
+// for (let i = 0; i < 20; i++) {
+//     rows.push(createData('example.org', 'Example', 42, true, "./*"));
+// }
 
 function descendingComparator<T>(a: T, b: T, orderBy: keyof T) {
     if (b[orderBy] < a[orderBy]) {
@@ -188,10 +190,72 @@ function SitesTableHead(props: SitesTableHeadProps) {
     );
 }
 
+interface ResponseRecord {
+    model: string,
+    pk: number,
+    fields: {
+        url: string,
+        label: string,
+        interval: number,
+        status: number,
+        regex: string
+    },
+    tags: string[]
+}
+
+interface ResponseData {
+    records: ResponseRecord[],
+    total_pages: number,
+    total_records: number
+}
+
+class WebsiteRecordManager {
+    inst: AxiosInstance;
+
+    constructor() {
+        this.inst = axios.create({
+            baseURL: 'http://localhost:8000/api/',
+            timeout: 1000,
+            //headers: {'X-Custom-Header': 'foobar'}
+        });
+    }
+
+    async get(pageSize: number, pageNumber: number,): Promise<Data[] | null> {
+        try {
+            const response = await this.inst.get(`record/${pageNumber}`, {
+                params: {
+                    page_size: pageSize
+                }
+            });
+            const data: ResponseData = response.data;
+            return data.records.map(rec => createData(rec.fields.url, rec.fields.label, rec.fields.interval, rec.fields.status === 1 ? true : false, rec.fields.regex));
+        } catch (error) {
+            console.error(error);
+        }
+        return null;
+    }
+}
+
 function SitesContent() {
     const [page, setPage] = React.useState(0);
     const [rowsPerPage, setRowsPerPage] = React.useState(5);
     const [filterListShown, setFilterListShown] = React.useState(false);
+    const [rows, setRows] = React.useState<Data[]>([]);
+
+    /** Enhanced table props */
+    const [order, setOrder] = React.useState<Order>('asc');
+    const [orderBy, setOrderBy] = React.useState<keyof Data>('label');
+    const [selected, setSelected] = React.useState<readonly string[]>([]);
+    const [dense, setDense] = React.useState(true);
+
+    const manager = new WebsiteRecordManager();
+    const getRows = async (pageSize: number, pageNumber: number) => {
+        setRows(await manager.get(pageSize, pageNumber) ?? []);
+    };
+
+    React.useEffect(() => {
+        getRows(rowsPerPage, page);
+    }, [page, rowsPerPage]);
 
     // Avoid a layout jump when reaching the last page with empty rows.
     const emptyRows =
@@ -205,13 +269,6 @@ function SitesContent() {
         setRowsPerPage(parseInt(event.target.value, 10));
         setPage(0);
     };
-
-    /** Enhanced table props */
-    const [order, setOrder] = React.useState<Order>('asc');
-    const [orderBy, setOrderBy] = React.useState<keyof Data>('label');
-    const [selected, setSelected] = React.useState<readonly string[]>([]);
-    const [dense, setDense] = React.useState(true);
-
 
     const handleRequestSort = (
         event: React.MouseEvent<unknown>,
@@ -279,46 +336,44 @@ function SitesContent() {
                                 filterListShown={filterListShown}
                             />
                             <TableBody>
-                                {rows.slice().sort(getComparator(order, orderBy))
-                                    .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-                                    .map((row, index) => {
-                                        const isItemSelected = isSelected(row.label);
-                                        const labelId = `enhanced-table-checkbox-${index}`;
+                                {rows.map((row, index) => {
+                                    const isItemSelected = isSelected(row.label);
+                                    const labelId = `enhanced-table-checkbox-${index}`;
 
-                                        return (
-                                            <TableRow
-                                                hover
-                                                onClick={(event) => handleClick(event, row.label)}
-                                                role="checkbox"
-                                                aria-checked={isItemSelected}
-                                                tabIndex={-1}
-                                                key={row.label}
-                                                selected={isItemSelected}
+                                    return (
+                                        <TableRow
+                                            hover
+                                            onClick={(event) => handleClick(event, row.label)}
+                                            role="checkbox"
+                                            aria-checked={isItemSelected}
+                                            tabIndex={-1}
+                                            key={row.label}
+                                            selected={isItemSelected}
+                                        >
+                                            <TableCell padding="checkbox">
+                                                <Checkbox
+                                                    color="primary"
+                                                    checked={isItemSelected}
+                                                    inputProps={{
+                                                        'aria-labelledby': labelId,
+                                                    }}
+                                                />
+                                            </TableCell>
+                                            <TableCell
+                                                component="th"
+                                                id={labelId}
+                                                scope="row"
+                                                padding="none"
                                             >
-                                                <TableCell padding="checkbox">
-                                                    <Checkbox
-                                                        color="primary"
-                                                        checked={isItemSelected}
-                                                        inputProps={{
-                                                            'aria-labelledby': labelId,
-                                                        }}
-                                                    />
-                                                </TableCell>
-                                                <TableCell
-                                                    component="th"
-                                                    id={labelId}
-                                                    scope="row"
-                                                    padding="none"
-                                                >
-                                                    {row.label}
-                                                </TableCell>
-                                                <TableCell>{row.url}</TableCell>
-                                                <TableCell align="right">{row.interval}</TableCell>
-                                                <TableCell ><Checkbox checked={row.status} /></TableCell>
-                                                <TableCell >{row.regex}</TableCell>
-                                            </TableRow>
-                                        );
-                                    })}
+                                                {row.label}
+                                            </TableCell>
+                                            <TableCell>{row.url}</TableCell>
+                                            <TableCell align="right">{row.interval}</TableCell>
+                                            <TableCell ><Checkbox checked={row.status} /></TableCell>
+                                            <TableCell >{row.regex}</TableCell>
+                                        </TableRow>
+                                    );
+                                })}
                                 {emptyRows > 0 && (
                                     <TableRow
                                         style={{

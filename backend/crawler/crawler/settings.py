@@ -38,8 +38,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'drf_yasg',
     'core',
-    'api'
-    "django.contrib.staticfiles",  # Required for GraphiQL
+    'api',
     "graphene_django"
 ]
 

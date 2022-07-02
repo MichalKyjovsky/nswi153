@@ -51,6 +51,17 @@ class TagManager(models.Manager):
         return self.create(website_record=record, tag=tag)
 
 
+class Tag(models.Model):
+    """
+    Represents a single :class: `WebsiteRecord` tag.
+    """
+    tag = models.CharField(max_length=64)
+    # website_record = models.ForeignKey(WebsiteRecord, on_delete=models.CASCADE)
+    # website_record = models.ManyToManyField(WebsiteRecord)
+
+    # objects = TagManager()
+
+
 class WebsiteRecord(models.Model):
     """
     Represents a single website crawling record - instructions for crawling.
@@ -59,24 +70,16 @@ class WebsiteRecord(models.Model):
     class Meta:
         ordering = ('label', 'interval')
 
-    STATUS = ((1, 'Active'), (0, 'Inactive'))
+    # STATUS = ((1, 'Active'), (0, 'Inactive'))
     url = models.CharField(max_length=256)
     label = models.CharField(max_length=64)
     interval = models.IntegerField()
-    status = models.IntegerField(choices=STATUS)
+    # status = models.IntegerField(choices=STATUS)
+    active = models.BooleanField(default=False)
     regex = models.CharField(max_length=128)
+    tags = models.ManyToManyField(Tag)
 
     objects = WebsiteRecordManager()
-
-
-class Tag(models.Model):
-    """
-    Represents a single :class: `WebsiteRecord` tag.
-    """
-    tag = models.CharField(max_length=64)
-    website_record = models.ForeignKey(WebsiteRecord, on_delete=models.CASCADE)
-
-    objects = TagManager()
 
 
 class Execution(models.Model):
@@ -106,9 +109,10 @@ class Node(models.Model):
     A class object for a web map resulting from an :class: `Execution`.
     Only one graph is stored per every :class: `WebsiteRecord` (the latest one).
     """
+    title = models.CharField(max_length=2048, null=True)
+    crawl_time = models.CharField(max_length=2048)
     url = models.CharField(max_length=2048)
-    domain = models.CharField(max_length=2048)
-    website_record = models.ForeignKey(WebsiteRecord, on_delete=models.CASCADE)
+    owner = models.ForeignKey(WebsiteRecord, on_delete=models.CASCADE)
 
 
 class Edge(models.Model):

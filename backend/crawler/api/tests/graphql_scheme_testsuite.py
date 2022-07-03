@@ -29,8 +29,6 @@ class SchemaTestCase(GraphQLTestCase):
             '''
         )
 
-        content = json.loads(response.content)
-
         # This validates the status code and if you get errors
         self.assertResponseNoErrors(response)
 
@@ -58,8 +56,6 @@ class SchemaTestCase(GraphQLTestCase):
             }
             '''
         )
-
-        content = json.loads(response.content)
 
         # This validates the status code and if you get errors
         self.assertResponseNoErrors(response)

@@ -3,7 +3,7 @@ import json
 
 
 class WebsiteRecordManager(models.Manager):
-    fields = ('url', 'label', 'interval', 'status', 'regex')
+    fields = ('url', 'label', 'interval', 'active', 'regex')
 
     def valid_record_data(self, data):
         """
@@ -23,7 +23,7 @@ class WebsiteRecordManager(models.Manager):
             # invalid casting ValueError should be caught in the views.py
             return False
 
-        if not (int(data['status']) == 0 or int(data['status']) == 1):
+        if not (data['active'] in ["True", "False"]):
             # invalid casting ValueError should be caught in the views.py
             return False
 
@@ -44,11 +44,11 @@ class WebsiteRecordManager(models.Manager):
 
 
 class TagManager(models.Manager):
-    def create_tag(self, record, tag):
+    def create_tag(self, tag):
         """
         Creates a new :class: `Tag` instance.
         """
-        return self.create(website_record=record, tag=tag)
+        return self.create(tag=tag)
 
 
 class Tag(models.Model):
@@ -59,7 +59,7 @@ class Tag(models.Model):
     # website_record = models.ForeignKey(WebsiteRecord, on_delete=models.CASCADE)
     # website_record = models.ManyToManyField(WebsiteRecord)
 
-    # objects = TagManager()
+    objects = TagManager()
 
 
 class WebsiteRecord(models.Model):

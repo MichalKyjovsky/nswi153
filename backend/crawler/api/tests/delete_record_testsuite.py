@@ -1,5 +1,5 @@
 from django.test import TestCase
-from ..models import WebsiteRecord
+from api.models import WebsiteRecord
 
 
 class DeleteRecordTest(TestCase):

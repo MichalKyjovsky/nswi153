@@ -42,7 +42,7 @@ def get_graph(request, record):
     operation_description='Adds a new `WebsiteRecord` to the database.',
     request_body=openapi.Schema(
         type=openapi.TYPE_OBJECT,
-        required=['url', 'label', 'interval', 'status', 'regex'],
+        required=['url', 'label', 'interval', 'active', 'regex'],
         properties={
             'url': openapi.Schema(type=openapi.TYPE_STRING,
                                   description="The URL where the crawler shall start. "
@@ -55,9 +55,9 @@ def get_graph(request, record):
             'interval': openapi.Schema(type=openapi.TYPE_INTEGER,
                                        description="Crawling interval (in seconds). Must be be a non-negative integer.",
                                        example=3600),
-            'status': openapi.Schema(type=openapi.TYPE_INTEGER,
-                                     description="One of the values: 0 (deactivated) or 1 (activated).",
-                                     example=1),
+            'active': openapi.Schema(type=openapi.TYPE_BOOLEAN,
+                                     description="One of the values: False (deactivated) or True (activated).",
+                                     example=True),
             'regex': openapi.Schema(type=openapi.TYPE_STRING,
                                     description="A non-empty regex to define the URLs to be crawled next. "
                                                 + "If everything should be matched, use `.*`.",
@@ -83,12 +83,14 @@ def add_record(request):
         record = WebsiteRecord.objects.create_record(json_data)
         tags = []
         if 'tags' in request.data:
-            tags = [Tag.objects.create_tag(record, tag.strip()) for tag in request.data['tags'].split(',')]
+            tags = [Tag.objects.create_tag(tag.strip()) for tag in request.data['tags'].split(',')]
         with transaction.atomic():
             # atomic to preserve consistency
             record.save()
             for tag in tags:
+                record.tags.add(tag)
                 tag.save()
+
         return Response({"message": f"Record and its tags created successfully! (1 record, {len(tags)} tags)"},
                         status=status.HTTP_201_CREATED)
     except (ValueError, DatabaseError, IntegrityError, transaction.TransactionManagementError):
@@ -449,7 +451,7 @@ def load_and_filter_records(request):
 
     if 'tag-filter' in request.query_params and request.query_params.get('tag-filter') is not None:
         records = [record for record in records if
-                   has_tag(record.tag_set.all(), request.query_params.get('tag-filter'))]
+                   has_tag(record.tags.all(), request.query_params.get('tag-filter'))]
 
     return records
 
@@ -465,7 +467,7 @@ def get_tags(records):
     for record in records:
         record_id = record.pk
         record_list = []
-        for tag in record.tag_set.all():
+        for tag in record.tags.all():
             record_list.append(tag.tag)
         record_tags[record_id] = record_list
 

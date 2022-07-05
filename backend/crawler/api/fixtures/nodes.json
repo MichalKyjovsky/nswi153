@@ -1,0 +1,30 @@
+[
+  {
+    "model": "api.node",
+    "pk": 1,
+    "fields": {
+      "title": "Node A",
+      "url": "www.com.foo.baz",
+      "crawl_time": "",
+      "owner": 5
+    }
+  },
+  {
+    "model": "api.node",
+    "pk": 2,
+    "fields": {
+      "title": "Node B",
+      "url": "www.com.foo.baz.sas",
+      "crawl_time": "",
+      "owner": 6
+    }
+  },
+  {
+    "model": "api.edge",
+    "pk": 1,
+    "fields": {
+      "source": 1,
+      "target": 2
+    }
+  }
+]

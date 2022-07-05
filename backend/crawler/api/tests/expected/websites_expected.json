@@ -1,0 +1,42 @@
+{
+  "data": {
+    "websites": [
+      {
+        "id": "6",
+        "label": "amazon_crawl",
+        "url": "http://www.amazon.com",
+        "regex": "www.amazon.com.*",
+        "tags": [
+          {
+            "tag": "2"
+          },
+          {
+            "tag": "a"
+          },
+          {
+            "tag": "c"
+          }
+        ],
+        "active": false
+      },
+      {
+        "id": "5",
+        "label": "my_label",
+        "url": "http://www.google.com",
+        "regex": ".*",
+        "tags": [
+          {
+            "tag": "1"
+          },
+          {
+            "tag": "3"
+          },
+          {
+            "tag": "b"
+          }
+        ],
+        "active": true
+      }
+    ]
+  }
+}

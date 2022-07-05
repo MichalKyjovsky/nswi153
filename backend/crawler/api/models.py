@@ -3,7 +3,7 @@ import json
 
 
 class WebsiteRecordManager(models.Manager):
-    fields = ('url', 'label', 'interval', 'status', 'regex')
+    fields = ('url', 'label', 'interval', 'active', 'regex')
 
     def valid_record_data(self, data):
         """
@@ -23,7 +23,7 @@ class WebsiteRecordManager(models.Manager):
             # invalid casting ValueError should be caught in the views.py
             return False
 
-        if not (int(data['status']) == 0 or int(data['status']) == 1):
+        if not (data['active'] in ["True", "False"]):
             # invalid casting ValueError should be caught in the views.py
             return False
 
@@ -44,11 +44,22 @@ class WebsiteRecordManager(models.Manager):
 
 
 class TagManager(models.Manager):
-    def create_tag(self, record, tag):
+    def create_tag(self, tag):
         """
         Creates a new :class: `Tag` instance.
         """
-        return self.create(website_record=record, tag=tag)
+        return self.create(tag=tag)
+
+
+class Tag(models.Model):
+    """
+    Represents a single :class: `WebsiteRecord` tag.
+    """
+    tag = models.CharField(max_length=64)
+    # website_record = models.ForeignKey(WebsiteRecord, on_delete=models.CASCADE)
+    # website_record = models.ManyToManyField(WebsiteRecord)
+
+    objects = TagManager()
 
 
 class WebsiteRecord(models.Model):
@@ -59,24 +70,16 @@ class WebsiteRecord(models.Model):
     class Meta:
         ordering = ('label', 'interval')
 
-    STATUS = ((1, 'Active'), (0, 'Inactive'))
+    # STATUS = ((1, 'Active'), (0, 'Inactive'))
     url = models.CharField(max_length=256)
     label = models.CharField(max_length=64)
     interval = models.IntegerField()
-    status = models.IntegerField(choices=STATUS)
+    # status = models.IntegerField(choices=STATUS)
+    active = models.BooleanField(default=False)
     regex = models.CharField(max_length=128)
+    tags = models.ManyToManyField(Tag)
 
     objects = WebsiteRecordManager()
-
-
-class Tag(models.Model):
-    """
-    Represents a single :class: `WebsiteRecord` tag.
-    """
-    tag = models.CharField(max_length=64)
-    website_record = models.ForeignKey(WebsiteRecord, on_delete=models.CASCADE)
-
-    objects = TagManager()
 
 
 class Execution(models.Model):
@@ -106,9 +109,10 @@ class Node(models.Model):
     A class object for a web map resulting from an :class: `Execution`.
     Only one graph is stored per every :class: `WebsiteRecord` (the latest one).
     """
+    title = models.CharField(max_length=2048, null=True)
+    crawl_time = models.CharField(max_length=2048)
     url = models.CharField(max_length=2048)
-    domain = models.CharField(max_length=2048)
-    website_record = models.ForeignKey(WebsiteRecord, on_delete=models.CASCADE)
+    owner = models.ForeignKey(WebsiteRecord, on_delete=models.CASCADE)
 
 
 class Edge(models.Model):

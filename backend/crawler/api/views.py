@@ -410,6 +410,7 @@ def run_celery(quest):
 
 ########################################################
 
+
 def has_tag(tags, target) -> bool:
     """
     Verifies that the `target` tag is present in a query set.

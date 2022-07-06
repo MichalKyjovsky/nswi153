@@ -11,6 +11,14 @@ from .models import *
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 
+status_mapper = {
+    1: "IN PROGRESS",
+    2: "FINISHED",
+    3: "IN QUEUE",
+    4: "NEVER EXECUTED",
+    5: "UNKNOWN"  # for cases when something goes horribly wrong
+}
+
 OPTIONAL_CLAUSE = "Several filters can be used at the same time."
 SEE_ERROR = 'See the "error" key in the response for details.'
 
@@ -226,26 +234,51 @@ def update_record(request):
     ],
     responses={
         200: openapi.Response('Executions were returned.', examples={
-            "application/json": {"executions": [{"model": "api.execution", "pk": 15,
-                                                 "fields": {"title": "Amazon purchases", "url": "www.amazon.com",
-                                                            "crawl_time": "2022-04-15T14:30:00Z", "website_record": 6},
-                                                 "links": 0}, {"model": "api.execution", "pk": 16,
-                                                               "fields": {"title": "Amazon purchases",
-                                                                          "url": "www.amazon.com",
-                                                                          "crawl_time": "2022-04-15T14:30:00Z",
-                                                                          "website_record": 6}, "links": 0},
-                                                {"model": "api.execution", "pk": 11,
-                                                 "fields": {"title": "Google browser", "url": "www.google.com",
-                                                            "crawl_time": "2022-04-15T13:30:59Z", "website_record": 5},
-                                                 "links": 0}, {"model": "api.execution", "pk": 13,
-                                                               "fields": {"title": "Google browser",
-                                                                          "url": "www.google.com",
-                                                                          "crawl_time": "2022-04-16T13:30:59Z",
-                                                                          "website_record": 5}, "links": 0},
-                                                {"model": "api.execution", "pk": 14,
-                                                 "fields": {"title": "Google browser", "url": "www.google.com",
-                                                            "crawl_time": "2022-04-17T13:30:59Z", "website_record": 5},
-                                                 "links": 0}], "total_pages": 1, "total_records": 5}}),
+            "application/json": {
+                'executions': [
+                    {
+                        'model': 'api.execution',
+                        'pk': 15,
+                        'fields': {
+                            'title': 'Amazon purchases',
+                            'url': 'www.amazon.com',
+                            'crawl_duration': 600,
+                            'last_crawl': '2022-04-15T14:30:00Z',
+                            'website_record': 6,
+                            'status': 'IN QUEUE'
+                        },
+                        'links': 0
+                    },
+                    {
+                        'model': 'api.execution',
+                        'pk': 11,
+                        'fields': {
+                            'title': 'Google browser',
+                            'url': 'www.google.com',
+                            'crawl_duration': 0,
+                            'last_crawl': None,
+                            'website_record': 5,
+                            'status': 'NEVER EXECUTED'
+                        },
+                        'links': 0
+                    },
+                    {
+                        'model': 'api.execution',
+                        'pk': 13,
+                        'fields': {
+                            'title': 'Google browser',
+                            'url': 'www.google.com',
+                            'crawl_duration': 69,
+                            'last_crawl': '2022-04-16T13:30:59Z',
+                            'website_record': 5,
+                            'status': 'IN PROGRESS'
+                        },
+                        'links': 0
+                    }
+                ],
+                'total_pages': 1,
+                'total_records': 3
+            }}),
         400: openapi.Response('Requested page of the list is invalid. ' + SEE_ERROR)
     },
     tags=['Execution'])
@@ -258,7 +291,7 @@ def get_executions(request, page):
     @return: the request response
     """
     page_size, page_num = get_page_data(request, page)
-    executions = Execution.objects.all().select_related()
+    executions = map_execution_status(Execution.objects.all().select_related())
     response_data = serialize_data(executions, "executions", page_size, page_num)
     if type(response_data) == Response:
         return response_data
@@ -292,15 +325,48 @@ def get_executions(request, page):
                           default=10),
     ],
     responses={
-        200: openapi.Response('Executions were returned.', examples={"application/json": {"executions": [
-            {"model": "api.execution", "pk": 11,
-             "fields": {"title": "Google browser", "url": "www.google.com", "crawl_time": "2022-04-15T13:30:59Z",
-                        "website_record": 5}}, {"model": "api.execution", "pk": 13,
-                                                "fields": {"title": "Google browser", "url": "www.google.com",
-                                                           "crawl_time": "2022-04-16T13:30:59Z", "website_record": 5}},
-            {"model": "api.execution", "pk": 14,
-             "fields": {"title": "Google browser", "url": "www.google.com", "crawl_time": "2022-04-17T13:30:59Z",
-                        "website_record": 5}}], "total_pages": 1, "total_records": 3}}),
+        200: openapi.Response('Executions were returned.', examples={"application/json": {
+            'executions': [
+                {
+                    'model': 'api.execution',
+                    'pk': 11,
+                    'fields': {
+                        'title': 'Google browser',
+                        'url': 'www.google.com',
+                        'crawl_duration': 0,
+                        'last_crawl': None,
+                        'website_record': 5,
+                        'status': 'NEVER EXECUTED'
+                    }
+                },
+                {
+                    'model': 'api.execution',
+                    'pk': 13,
+                    'fields': {
+                        'title': 'Google browser',
+                        'url': 'www.google.com',
+                        'crawl_duration': 69,
+                        'last_crawl': '2022-04-16T13:30:59Z',
+                        'website_record': 5,
+                        'status': 'IN PROGRESS'
+                    }
+                },
+                {
+                    'model': 'api.execution',
+                    'pk': 14,
+                    'fields': {
+                        'title': 'Google browser',
+                        'url': 'www.google.com',
+                        'crawl_duration': 42,
+                        'last_crawl': '2022-04-17T13:30:59Z',
+                        'website_record': 5,
+                        'status': 'FINISHED'
+                    }
+                }
+            ],
+            'total_pages': 1,
+            'total_records': 3
+        }}),
         400: openapi.Response('Invalid Record ID or page provided in the request. ' + SEE_ERROR)
     },
     tags=['Execution'])
@@ -323,7 +389,7 @@ def get_execution(request, record, page):
     if len(executions) == 0:
         return Response({"error": f"Executions for Website Record ID {record} were not found!"},
                         status=status.HTTP_400_BAD_REQUEST)
-    response_dict = serialize_data(executions, "executions", page_size, page_num)
+    response_dict = serialize_data(map_execution_status(executions), "executions", page_size, page_num)
     if type(response_dict) == Response:
         return response_dict
     return Response(response_dict, status=status.HTTP_200_OK)
@@ -528,3 +594,17 @@ def do_activation(record, value, log):
     record.status = value
     record.save()
     return Response({"message": f"Website Record with ID {record_id} was {log}."}, status=status.HTTP_200_OK)
+
+
+def map_execution_status(executions):
+    """
+    Maps execution statuses from int values to human-readable values.
+    @param executions: an iterable containing :class: `Execution` instances to be mapped
+    @return: the same executions, but with status mapped from ints to human-readable strings
+    """
+    for execution in executions:
+        state = execution.status
+        if type(state) is not int or int(state) < 1 or int(state) > 5:
+            state = 5
+        execution.status = status_mapper[int(state)]
+    return executions

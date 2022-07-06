@@ -92,8 +92,10 @@ class Execution(models.Model):
 
     title = models.CharField(max_length=72)
     url = models.CharField(max_length=2048)
-    crawl_time = models.DateTimeField()
+    crawl_duration = models.IntegerField(default=0)  # 0 before first execution
+    last_crawl = models.DateTimeField(null=True)  # null before first execution
     website_record = models.ForeignKey(WebsiteRecord, on_delete=models.CASCADE)
+    status = models.IntegerField(default=4)
 
 
 class ExecutionLink(models.Model):

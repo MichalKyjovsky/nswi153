@@ -330,23 +330,6 @@ def get_execution(request, record, page):
 
 
 @swagger_auto_schema(
-    methods=['get'],
-    operation_description="Returns metrics of the application.  Not implemented yet, to be removed.",
-    responses={
-        200: openapi.Response('Metrics data returned.')
-    },
-    tags=['Monitoring'])
-@api_view(['GET'])
-def get_stats(request):
-    """
-    Returns the system stats.
-    @param request: the request that for routed to this API endpoint
-    @return: the request response
-    """
-    pass
-
-
-@swagger_auto_schema(
     methods=['put'],
     operation_description="Activates the specified `WebsiteRecord`.",
     manual_parameters=[

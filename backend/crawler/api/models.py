@@ -23,7 +23,7 @@ class WebsiteRecordManager(models.Manager):
             # invalid casting ValueError should be caught in the views.py
             return False
 
-        if not (data['active'] in ["True", "False"]):
+        if data['active'] not in ["True", "False"]:
             # invalid casting ValueError should be caught in the views.py
             return False
 
@@ -56,8 +56,6 @@ class Tag(models.Model):
     Represents a single :class: `WebsiteRecord` tag.
     """
     tag = models.CharField(max_length=64)
-    # website_record = models.ForeignKey(WebsiteRecord, on_delete=models.CASCADE)
-    # website_record = models.ManyToManyField(WebsiteRecord)
 
     objects = TagManager()
 
@@ -70,11 +68,9 @@ class WebsiteRecord(models.Model):
     class Meta:
         ordering = ('label', 'interval')
 
-    # STATUS = ((1, 'Active'), (0, 'Inactive'))
     url = models.CharField(max_length=256)
     label = models.CharField(max_length=64)
     interval = models.IntegerField()
-    # status = models.IntegerField(choices=STATUS)
     active = models.BooleanField(default=False)
     regex = models.CharField(max_length=128)
     tags = models.ManyToManyField(Tag)

@@ -172,12 +172,12 @@ def delete_record(request):
     responses={
         200: openapi.Response('Records were returned.', examples={"application/json": {"records": [
             {"model": "api.websiterecord", "pk": 6,
-             "fields": {"url": "http://www.amazon.com", "label": "amazon_crawl", "interval": 100, "status": 0,
+             "fields": {"url": "http://www.amazon.com", "label": "amazon_crawl", "interval": 100, "active": "true",
                         "regex": "www.amazon.com.*"}, "tags": ["a", "b", "c"]}, {"model": "api.websiterecord", "pk": 5,
                                                                                  "fields": {
                                                                                      "url": "http://www.google.com",
                                                                                      "label": "my_label",
-                                                                                     "interval": 120, "status": 1,
+                                                                                     "interval": 120, "active": "false",
                                                                                      "regex": ".*"}, "tags": []}],
             "total_pages": 1,
             "total_records": 2}}),
@@ -434,7 +434,7 @@ def activate(request, record):
     @param record: the ID of the record to be activated
     @return: the request response
     """
-    return do_activation(record, 1, "activated")
+    return do_activation(record, True, "activated")
 
 
 @swagger_auto_schema(
@@ -459,10 +459,23 @@ def deactivate(request, record):
     @param record: the record to be deactivated
     @return: the request response
     """
-    return do_activation(record, 0, "deactivated")
+    return do_activation(record, False, "deactivated")
 
+
+@swagger_auto_schema(
+    methods=['POST'],
+    operation_description="Runs a celery process.",
+    responses={
+        200: openapi.Response('The celery process was run.'),
+    },
+    tags=['Celery'])
+@api_view(['POST'])
+def run_celery(quest):
+    # TODO: to be implemented by @mkyjovsky including docs and tests
+    pass
 
 ########################################################
+
 
 def has_tag(tags, target) -> bool:
     """
@@ -547,7 +560,7 @@ def serialize_data(records, key, page_size, page_num):
     @param key: the key in JSON where the output should be stored
     @param page_size: objects per page
     @param page_num: page to be serialized
-    @return: paginated and serialzied data
+    @return: paginated and serialized data
     """
     JSONserializer = serializers.get_serializer("json")
     serializer = JSONserializer()
@@ -577,7 +590,7 @@ def do_activation(record, value, log):
     """
     Performs a (de) activation of a :class: `WebsiteRecord`.
     @param record: record to be activated
-    @param value: expected value (1 for activation, 0 for deactivation)
+    @param value: expected boolean value (True for activation, False for deactivation)
     @param log: log message
     @return: response to the request
     """
@@ -591,7 +604,7 @@ def do_activation(record, value, log):
         return Response({"error": f"Website Record with ID {record_id} was not found! The record was not {log}."},
                         status=status.HTTP_400_BAD_REQUEST)
     record = record[0]
-    record.status = value
+    record.active = value
     record.save()
     return Response({"message": f"Website Record with ID {record_id} was {log}."}, status=status.HTTP_200_OK)
 

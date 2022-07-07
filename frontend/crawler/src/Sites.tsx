@@ -19,6 +19,8 @@ import { visuallyHidden } from '@mui/utils';
 import FilterListIcon from '@mui/icons-material/FilterList';
 import TextField from '@mui/material/TextField';
 import SitesToolbar from './SitesToolbar';
+import NewSiteModal from './EditSiteModal';
+import { WebsiteRecord, emptyWebsiteRecord } from './Common';
 
 interface Data {
     url: string;
@@ -242,6 +244,8 @@ function SitesContent() {
     const [filterListShown, setFilterListShown] = React.useState(false);
     const [rows, setRows] = React.useState<Data[]>([]);
     const [totalPages, setTotalPages] = React.useState(1);
+    const [editModalOpen, setEditModalOpen] = React.useState(false);
+    const [editedRecord, setEditedRecord] = React.useState<WebsiteRecord>(emptyWebsiteRecord());
 
     /** Enhanced table props */
     const [order, setOrder] = React.useState<Order>('asc');
@@ -307,6 +311,12 @@ function SitesContent() {
         setSelected(newSelected);
     };
 
+    const handleCloseEditModal = () => setEditModalOpen(false);
+    const handleAddRecordClick = () => {
+        setEditedRecord(emptyWebsiteRecord());
+        setEditModalOpen(true);
+    }
+
     const isSelected = (name: string) => selected.indexOf(name) !== -1;
     /* Enhanced table props end */
 
@@ -322,8 +332,9 @@ function SitesContent() {
                 }}
             >
                 <Container maxWidth="lg" sx={{ mt: 2, mb: 2 }}>
-                    <SitesToolbar numSelected={selected.length} toggleFilterList={setFilterListShown} />
+                    <SitesToolbar numSelected={selected.length} toggleFilterList={setFilterListShown} addButtonClick={handleAddRecordClick} deleteButtonClick={() => { }} />
                     <TableContainer component={Paper} >
+                        {editModalOpen && <NewSiteModal handleClose={handleCloseEditModal} record={editedRecord} />}
                         <Table sx={{ minWidth: 500 }} aria-label="custom pagination table" size={'small'}>
                             <SitesTableHead
                                 numSelected={selected.length}

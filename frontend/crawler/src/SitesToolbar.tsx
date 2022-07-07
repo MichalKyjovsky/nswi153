@@ -12,10 +12,12 @@ import FilterListIcon from '@mui/icons-material/FilterList';
 export interface SitesToolbarProps {
     numSelected: number;
     toggleFilterList: React.Dispatch<React.SetStateAction<boolean>>;
+    addButtonClick: () => void;
+    deleteButtonClick: () => void;
 }
 
 const SitesToolbar = (props: SitesToolbarProps) => {
-    const { numSelected, toggleFilterList } = props;
+    const { numSelected, toggleFilterList, addButtonClick, deleteButtonClick } = props;
     const [filterListShown, setFilterListShown] = React.useState(false);
 
     return (
@@ -62,14 +64,14 @@ const SitesToolbar = (props: SitesToolbarProps) => {
                             </IconButton>
                         </Tooltip>
                         <Tooltip title="Add new website">
-                            <IconButton>
+                            <IconButton onClick={addButtonClick}>
                                 <Addicon />
                             </IconButton>
                         </Tooltip>
                     </React.Fragment>
                 ) :
                     <Tooltip title="Delete">
-                        <IconButton>
+                        <IconButton onClick={deleteButtonClick}>
                             <DeleteIcon />
                         </IconButton>
                     </Tooltip>

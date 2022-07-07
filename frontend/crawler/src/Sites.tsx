@@ -222,7 +222,7 @@ class WebsiteRecordManager {
 
     async get(pageSize: number, pageNumber: number,): Promise<Data[] | null> {
         try {
-            const response = await this.inst.get(`record/${pageNumber}`, {
+            const response = await this.inst.get(`record/${pageNumber}/`, {
                 params: {
                     page_size: pageSize
                 }
@@ -237,16 +237,16 @@ class WebsiteRecordManager {
 }
 
 function SitesContent() {
-    const [page, setPage] = React.useState(0);
+    const [page, setPage] = React.useState(1);
     const [rowsPerPage, setRowsPerPage] = React.useState(5);
     const [filterListShown, setFilterListShown] = React.useState(false);
     const [rows, setRows] = React.useState<Data[]>([]);
+    const [totalPages, setTotalPages] = React.useState(1);
 
     /** Enhanced table props */
     const [order, setOrder] = React.useState<Order>('asc');
     const [orderBy, setOrderBy] = React.useState<keyof Data>('label');
     const [selected, setSelected] = React.useState<readonly string[]>([]);
-    const [dense, setDense] = React.useState(true);
 
     const manager = new WebsiteRecordManager();
     const getRows = async (pageSize: number, pageNumber: number) => {
@@ -258,8 +258,7 @@ function SitesContent() {
     }, [page, rowsPerPage]);
 
     // Avoid a layout jump when reaching the last page with empty rows.
-    const emptyRows =
-        page > 0 ? Math.max(0, (1 + page) * rowsPerPage - rows.length) : 0;
+    const emptyRows = rowsPerPage - rows.length;
 
     const handleChangePage = (event: React.MouseEvent<HTMLButtonElement> | null, newPage: number) => {
         setPage(newPage);
@@ -267,7 +266,7 @@ function SitesContent() {
 
     const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         setRowsPerPage(parseInt(event.target.value, 10));
-        setPage(0);
+        setPage(1);
     };
 
     const handleRequestSort = (
@@ -325,7 +324,7 @@ function SitesContent() {
                 <Container maxWidth="lg" sx={{ mt: 2, mb: 2 }}>
                     <SitesToolbar numSelected={selected.length} toggleFilterList={setFilterListShown} />
                     <TableContainer component={Paper} >
-                        <Table sx={{ minWidth: 500 }} aria-label="custom pagination table">
+                        <Table sx={{ minWidth: 500 }} aria-label="custom pagination table" size={'small'}>
                             <SitesTableHead
                                 numSelected={selected.length}
                                 order={order}
@@ -377,7 +376,7 @@ function SitesContent() {
                                 {emptyRows > 0 && (
                                     <TableRow
                                         style={{
-                                            height: (dense ? 33 : 53) * emptyRows,
+                                            height: 55 * emptyRows,
                                         }}
                                     >
                                         <TableCell colSpan={6} />
@@ -387,7 +386,7 @@ function SitesContent() {
                             <TableFooter>
                                 <TableRow>
                                     <TablePagination
-                                        rowsPerPageOptions={[5, 10, 25, { label: 'All', value: -1 }]}
+                                        rowsPerPageOptions={[5, 10, 25]}
                                         colSpan={6}
                                         count={rows.length}
                                         rowsPerPage={rowsPerPage}

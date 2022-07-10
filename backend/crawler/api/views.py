@@ -72,7 +72,9 @@ def get_graph(request, record):
                 }
             }
         ]}),
-        400: openapi.Response('Invalid request details!')
+        400: openapi.Response(
+            "Invalid request! The request must contain the 'record' key with ID specified as a numeric value."),
+        404: openapi.Response('Record with ID {record_id} was not found!')
     },
     tags=['Website Record'])
 @swagger_auto_schema(
@@ -143,7 +145,7 @@ def get_graph(request, record):
         }),
     responses={
         204: openapi.Response('Record was updated successfully!'),
-        400: openapi.Response('Invalid data! Record was not updated.')
+        400: openapi.Response('Invalid data! Record was not updated.'),
     },
     tags=['Website Record'])
 @swagger_auto_schema(

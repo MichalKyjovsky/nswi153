@@ -23,7 +23,6 @@ urlpatterns = [
     path('record/', views.get_record, name='get_record'),
     path('record/<page>/', views.get_records, name='get_records'),
     path('record/delete/', views.delete_record, name='delete_record'),
-    path('record/update/', views.update_record, name='update_record'),
     path('executions/<page>/', views.get_executions, name='get_executions'),
     path('execution/<record>/<page>/', views.get_execution, name='get_execution'),
     path('activate/<record>/', views.activate, name='activate_record'),

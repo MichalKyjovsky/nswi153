@@ -30,6 +30,7 @@ class WebsiteRecordManager(models.Manager):
             return False
 
         if 'active' in data.keys() and data['active'] not in [True, False]:
+
             # invalid casting ValueError should be caught in the views.py
             return False
 

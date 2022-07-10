@@ -215,11 +215,7 @@ def delete_record(request):
         400: openapi.Response('Requested page of the list is invalid. ' + SEE_ERROR)
     },
     tags=['Website Record'])
-
-
 @api_view(['GET'])
-
-
 def get_records(request, page):
     """
     Retrieves all :class: `WebsiteRecord` objects, returns a paginated list
@@ -560,7 +556,6 @@ def deactivate(request, record):
     """
     return do_activation(record, False, "deactivated")
 
-
 @swagger_auto_schema(
     methods=['POST'],
     operation_description="Runs a celery process.",
@@ -573,6 +568,18 @@ def run_celery(quest):
     # TODO: to be implemented by @mkyjovsky including docs and tests
     pass
 
+
+@swagger_auto_schema(
+    methods=['POST'],
+    operation_description="Runs a celery process.",
+    responses={
+        200: openapi.Response('The celery process was run.'),
+    },
+    tags=['Celery'])
+@api_view(['POST'])
+def run_celery(quest):
+    # TODO: to be implemented by @mkyjovsky including docs and tests
+    pass
 
 ########################################################
 

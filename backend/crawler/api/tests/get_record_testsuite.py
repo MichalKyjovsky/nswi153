@@ -6,7 +6,7 @@ class GetRecordTest(TestCase):
     fixtures = ['basic.json']
 
     def test_get_valid_record(self):
-        response = self.client.get('/api/record/?record=5')
+        response = self.client.get('/api/record/get/?record=5')
         assert 'error' not in response.data
         assert len(response.data) == 1
         assert response.data[0]['fields']['label'] == 'my_label'
@@ -14,16 +14,16 @@ class GetRecordTest(TestCase):
         assert 'b' in response.data[0]['fields']['tags']
 
     def test_get_invalid_record(self):
-        response = self.client.get('/api/record/?record=666')
+        response = self.client.get('/api/record/get/?record=666')
         assert 'error' in response.data
         assert response.status_code == status.HTTP_400_BAD_REQUEST
 
     def test_get_invalid_record_id_type(self):
-        response = self.client.get('/api/record/?record=abc')
+        response = self.client.get('/api/record/get/?record=abc')
         assert 'error' in response.data
         assert response.status_code == status.HTTP_400_BAD_REQUEST
 
     def test_get_no_record_id(self):
-        response = self.client.get('/api/record/?potato=rotten')
+        response = self.client.get('/api/record/get/?potato=rotten')
         assert 'error' in response.data
         assert response.status_code == status.HTTP_400_BAD_REQUEST

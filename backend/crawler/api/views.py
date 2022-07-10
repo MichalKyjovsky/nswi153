@@ -569,6 +569,7 @@ def run_celery(quest):
     # TODO: to be implemented by @mkyjovsky including docs and tests
     pass
 
+
 ########################################################
 
 

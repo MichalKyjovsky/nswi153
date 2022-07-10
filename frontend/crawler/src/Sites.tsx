@@ -211,6 +211,12 @@ interface ResponseData {
     total_records: number
 }
 
+interface WebsiteResponse {
+    records: Data[],
+    totalPages: number,
+    totalRecords: number
+}
+
 class WebsiteRecordManager {
     inst: AxiosInstance;
 
@@ -222,15 +228,19 @@ class WebsiteRecordManager {
         });
     }
 
-    async get(pageSize: number, pageNumber: number,): Promise<Data[] | null> {
+    async get(pageSize: number, pageNumber: number,): Promise<WebsiteResponse | null> {
         try {
-            const response = await this.inst.get(`record/${pageNumber}/`, {
+            const response = await this.inst.get(`record/${pageNumber + 1}/`, {
                 params: {
                     page_size: pageSize
                 }
             });
             const data: ResponseData = response.data;
-            return data.records.map(rec => createData(rec.fields.url, rec.fields.label, rec.fields.interval, rec.fields.status === 1 ? true : false, rec.fields.regex));
+            return {
+                records: data.records.map(rec => createData(rec.fields.url, rec.fields.label, rec.fields.interval, rec.fields.status === 1 ? true : false, rec.fields.regex)),
+                totalPages: data.total_pages,
+                totalRecords: data.total_records
+            };
         } catch (error) {
             console.error(error);
         }
@@ -239,11 +249,11 @@ class WebsiteRecordManager {
 }
 
 function SitesContent() {
-    const [page, setPage] = React.useState(1);
+    const [page, setPage] = React.useState(0);
     const [rowsPerPage, setRowsPerPage] = React.useState(5);
     const [filterListShown, setFilterListShown] = React.useState(false);
     const [rows, setRows] = React.useState<Data[]>([]);
-    const [totalPages, setTotalPages] = React.useState(1);
+    const [totalRecords, setTotalRecords] = React.useState(0);
     const [editModalOpen, setEditModalOpen] = React.useState(false);
     const [editedRecord, setEditedRecord] = React.useState<WebsiteRecord>(emptyWebsiteRecord());
 
@@ -254,7 +264,9 @@ function SitesContent() {
 
     const manager = new WebsiteRecordManager();
     const getRows = async (pageSize: number, pageNumber: number) => {
-        setRows(await manager.get(pageSize, pageNumber) ?? []);
+        const response = await manager.get(pageSize, pageNumber);
+        setRows(response ? response.records : []);
+        response && setTotalRecords(response.totalRecords);
     };
 
     React.useEffect(() => {
@@ -262,7 +274,7 @@ function SitesContent() {
     }, [page, rowsPerPage]);
 
     // Avoid a layout jump when reaching the last page with empty rows.
-    const emptyRows = rowsPerPage - rows.length;
+    const emptyRows = totalRecords > rowsPerPage ? rowsPerPage - rows.length : 0;
 
     const handleChangePage = (event: React.MouseEvent<HTMLButtonElement> | null, newPage: number) => {
         setPage(newPage);
@@ -270,7 +282,7 @@ function SitesContent() {
 
     const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         setRowsPerPage(parseInt(event.target.value, 10));
-        setPage(1);
+        setPage(0);
     };
 
     const handleRequestSort = (
@@ -399,15 +411,15 @@ function SitesContent() {
                                     <TablePagination
                                         rowsPerPageOptions={[5, 10, 25]}
                                         colSpan={6}
-                                        count={rows.length}
+                                        count={totalRecords}
                                         rowsPerPage={rowsPerPage}
                                         page={page}
-                                        SelectProps={{
-                                            inputProps: {
-                                                'aria-label': 'rows per page',
-                                            },
-                                            native: true,
-                                        }}
+                                        // SelectProps={{
+                                        //     inputProps: {
+                                        //         'aria-label': 'rows per page',
+                                        //     },
+                                        //     native: true,
+                                        // }}
                                         onPageChange={handleChangePage}
                                         onRowsPerPageChange={handleChangeRowsPerPage}
                                         ActionsComponent={TablePaginationActions}

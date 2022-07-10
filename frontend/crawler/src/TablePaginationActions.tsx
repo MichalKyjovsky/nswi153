@@ -22,7 +22,7 @@ export default function TablePaginationActions(props: TablePaginationActionsProp
     const handleFirstPageButtonClick = (
         event: React.MouseEvent<HTMLButtonElement>,
     ) => {
-        onPageChange(event, 1);
+        onPageChange(event, 0);
     };
 
     const handleBackButtonClick = (event: React.MouseEvent<HTMLButtonElement>) => {

@@ -46,7 +46,37 @@ def get_graph(request, record):
 
 
 @swagger_auto_schema(
-    methods=['put'],
+    method='get',
+    operation_description='Returns details of a single `WebsiteRecord` object.',
+    manual_parameters=[
+        openapi.Parameter('record', openapi.IN_PATH, "The ID of the `WebsiteRecord` whose data are requested.",
+                          type=openapi.TYPE_INTEGER,
+                          required=True, example=42)
+    ],
+    responses={
+        200: openapi.Response('Record was returned.', examples={"application/json": [
+            {
+                'model': 'api.websiterecord',
+                'pk': 1,
+                'fields': {
+                    'url': 'http://www.google.com',
+                    'label': 'my_label',
+                    'interval': 120,
+                    'active': True,
+                    'regex': '.*',
+                    'tags': [
+                        'my_tag',
+                        'super_awersome_website',
+                        'third_tag'
+                    ]
+                }
+            }
+        ]}),
+        400: openapi.Response('Invalid request details!')
+    },
+    tags=['Website Record'])
+@swagger_auto_schema(
+    method='put',
     operation_description='Adds a new `WebsiteRecord` to the database.',
     request_body=openapi.Schema(
         type=openapi.TYPE_OBJECT,
@@ -79,34 +109,45 @@ def get_graph(request, record):
         400: openapi.Response('When invalid record data was provided. ' + SEE_ERROR)
     },
     tags=['Website Record'])
-@api_view(['PUT'])
-def add_record(request):
-    """
-    Adds a new :class: `WebsiteRecord` to the database.
-    @param request: the request that for routed to this API endpoint
-    @return: the request response
-    """
-    json_data = request.body.decode('utf-8')
-    try:
-        record = WebsiteRecord.objects.create_record(json_data)
-        tags = []
-        if 'tags' in request.data:
-            tags = [Tag.objects.create_tag(tag.strip()) for tag in request.data['tags'].split(',')]
-        with transaction.atomic():
-            # atomic to preserve consistency
-            record.save()
-            for tag in tags:
-                record.tags.add(tag)
-                tag.save()
-
-        return Response({"message": f"Record and its tags created successfully! (1 record, {len(tags)} tags)"},
-                        status=status.HTTP_201_CREATED)
-    except (ValueError, DatabaseError, IntegrityError, transaction.TransactionManagementError):
-        return Response({"error": "Invalid record parameters entered!"}, status=status.HTTP_400_BAD_REQUEST)
-
-
 @swagger_auto_schema(
-    methods=['delete'],
+    method='post',
+    operation_description='Updates details of a `WebsiteRecord` in the database.',
+    request_body=openapi.Schema(
+        type=openapi.TYPE_OBJECT,
+        required=['id'],
+        properties={
+            'id': openapi.Schema(type=openapi.TYPE_INTEGER,
+                                 description="A valid ID of the `WebsiteRecord` to be updated.",
+                                 example=69),
+            'url': openapi.Schema(type=openapi.TYPE_STRING,
+                                  description="The URL where the crawler shall start. "
+                                              + "Must be between 1 and 255 characters long.",
+                                  example="http://www.crawler.com"),
+            'label': openapi.Schema(type=openapi.TYPE_STRING,
+                                    description="The label of the to-be-created `WebsiteRecord`. "
+                                                + "1-2563 characters long.",
+                                    example="My first website record"),
+            'interval': openapi.Schema(type=openapi.TYPE_INTEGER,
+                                       description="Crawling interval (in seconds). Must be be a non-negative integer.",
+                                       example=3600),
+            'active': openapi.Schema(type=openapi.TYPE_BOOLEAN,
+                                     description="One of the values: `False` (deactivated) or `True` (activated).",
+                                     example=True),
+            'regex': openapi.Schema(type=openapi.TYPE_STRING,
+                                    description="A non-empty regex to define the URLs to be crawled next. "
+                                                + "If everything should be matched, use `.*`.",
+                                    example="crawler.com"),
+            'tags': openapi.Schema(type=openapi.TYPE_STRING,
+                                   description="A comma-separated list of the `WebsiteRecord`'s tags.",
+                                   example="awesome,crawl,quick")
+        }),
+    responses={
+        204: openapi.Response('Record was updated successfully!'),
+        400: openapi.Response('Invalid data! Record was not updated.')
+    },
+    tags=['Website Record'])
+@swagger_auto_schema(
+    method='delete',
     operation_description='Deletes a `WebsiteRecord` from the database.',
     request_body=openapi.Schema(
         type=openapi.TYPE_OBJECT,
@@ -122,24 +163,20 @@ def add_record(request):
             'Invalid requested record (not an integer, ID not found or the record ID missing entirely. ' + SEE_ERROR)
     },
     tags=['Website Record'])
-@api_view(['DELETE'])
-def delete_record(request):
+@api_view(['GET', 'POST', 'PUT', 'DELETE'])
+def record_crud(request):
     """
-    Deletes a single :class: `WebsiteRecord` object from the database.
-    @param request: the request that for routed to this API endpoint
-    @return: the request response
+    A routing functions for processing record non-parameterized requests (not paginated get_records).
+    @param request: request to be handled
+    @return: the result of the corresponding operation
     """
-    if 'record_id' in request.data:
-        try:
-            record_id = int(request.data['record_id'])
-        except ValueError:
-            return Response({"error": "Invalid record ID for deleting entered!"}, status=status.HTTP_400_BAD_REQUEST)
-        record = WebsiteRecord.objects.filter(id=record_id)
-        if record:
-            record.delete()
-            return Response({"message": "Record deleted successfully!"}, status=status.HTTP_200_OK)
-        return Response({"error": "Could not find and delete selected record."}, status=status.HTTP_400_BAD_REQUEST)
-    return Response({"error": "No Website Record ID for deleting provided!"}, status=status.HTTP_400_BAD_REQUEST)
+    if request.method == 'GET':
+        return get_record(request)
+    if request.method == 'POST':
+        return update_record(request)
+    if request.method == 'DELETE':
+        return delete_record(request)
+    return add_record(request)
 
 
 @swagger_auto_schema(
@@ -233,104 +270,6 @@ def get_records(request, page):
     response_dict = add_tags(response_dict, record_tags)
     response_dict = add_execution_details(response_dict)
     return Response(response_dict, status=status.HTTP_200_OK)
-
-
-@swagger_auto_schema(
-    methods=['get'],
-    operation_description='Returns details of a single `WebsiteRecord` object.',
-    manual_parameters=[
-        openapi.Parameter('record', openapi.IN_PATH, "The ID of the `WebsiteRecord` whose data are requested.",
-                          type=openapi.TYPE_INTEGER,
-                          required=True, example=42)
-    ],
-    responses={
-        200: openapi.Response('Record was returned.', examples={"application/json": [
-            {
-                'model': 'api.websiterecord',
-                'pk': 1,
-                'fields': {
-                    'url': 'http://www.google.com',
-                    'label': 'my_label',
-                    'interval': 120,
-                    'active': True,
-                    'regex': '.*',
-                    'tags': [
-                        'my_tag',
-                        'super_awersome_website',
-                        'third_tag'
-                    ]
-                }
-            }
-        ]}),
-        400: openapi.Response('Invalid request details!')
-    },
-    tags=['Website Record'])
-@api_view(['GET'])
-def get_record(request):
-    if 'record' in request.query_params:
-        record = request.query_params.get('record')
-        if record.isnumeric():
-            record_id = int(record)
-            record = WebsiteRecord.objects.select_related().filter(pk=record_id)
-            if len(record) > 0:
-                json_serializer = serializers.get_serializer("json")
-                serializer = json_serializer()
-                tags = get_tags(record)
-                serialized = json.loads(serializer.serialize(record))
-                serialized[0]['fields']['tags'] = tags[record_id]
-                return Response(serialized, status=status.HTTP_200_OK)
-    return Response({"error": "Invalid request details!"}, status=status.HTTP_400_BAD_REQUEST)
-
-
-@swagger_auto_schema(
-    methods=['post'],
-    operation_description='Updates details of a `WebsiteRecord` in the database.',
-    request_body=openapi.Schema(
-        type=openapi.TYPE_OBJECT,
-        required=['id'],
-        properties={
-            'id': openapi.Schema(type=openapi.TYPE_INTEGER,
-                                 description="A valid ID of the `WebsiteRecord` to be updated.",
-                                 example=69),
-            'url': openapi.Schema(type=openapi.TYPE_STRING,
-                                  description="The URL where the crawler shall start. "
-                                              + "Must be between 1 and 255 characters long.",
-                                  example="http://www.crawler.com"),
-            'label': openapi.Schema(type=openapi.TYPE_STRING,
-                                    description="The label of the to-be-created `WebsiteRecord`. "
-                                                + "1-2563 characters long.",
-                                    example="My first website record"),
-            'interval': openapi.Schema(type=openapi.TYPE_INTEGER,
-                                       description="Crawling interval (in seconds). Must be be a non-negative integer.",
-                                       example=3600),
-            'active': openapi.Schema(type=openapi.TYPE_BOOLEAN,
-                                     description="One of the values: `False` (deactivated) or `True` (activated).",
-                                     example=True),
-            'regex': openapi.Schema(type=openapi.TYPE_STRING,
-                                    description="A non-empty regex to define the URLs to be crawled next. "
-                                                + "If everything should be matched, use `.*`.",
-                                    example="crawler.com"),
-            'tags': openapi.Schema(type=openapi.TYPE_STRING,
-                                   description="A comma-separated list of the `WebsiteRecord`'s tags.",
-                                   example="awesome,crawl,quick")
-        }),
-    responses={
-        204: openapi.Response('Record was updated successfully!'),
-        400: openapi.Response('Invalid data! Record was not updated.')
-    },
-    tags=['Website Record'])
-@api_view(['POST'])
-def update_record(request):
-    """
-    Updates a record data.
-    @param request: the request that for routed to this API endpoint
-    @return: the request response
-    """
-    json_data = json.dumps(request.data)
-    if WebsiteRecord.objects.update_record(json_data):
-        update_tags(request.data)
-        return Response({"message": f"Record was updated successfully!"}, status=status.HTTP_204_NO_CONTENT)
-    return Response({"error": "Invalid data! Record was not updated."}, status=status.HTTP_400_BAD_REQUEST)
 
 
 @swagger_auto_schema(
@@ -571,7 +510,92 @@ def run_celery(quest):
 
 
 ########################################################
+# WebsiteRecord CRUD operations
 
+def add_record(request):
+    """
+    Adds a new :class: `WebsiteRecord` to the database.
+    @param request: the request that for routed to this API endpoint
+    @return: the request response
+    """
+    json_data = request.body.decode('utf-8')
+    try:
+        record = WebsiteRecord.objects.create_record(json_data)
+        tags = []
+        if 'tags' in request.data:
+            tags = [Tag.objects.create_tag(tag.strip()) for tag in request.data['tags'].split(',')]
+        with transaction.atomic():
+            # atomic to preserve consistency
+            record.save()
+            for tag in tags:
+                record.tags.add(tag)
+                tag.save()
+
+        return Response({"message": f"Record and its tags created successfully! (1 record, {len(tags)} tags)"},
+                        status=status.HTTP_201_CREATED)
+    except (ValueError, DatabaseError, IntegrityError, transaction.TransactionManagementError):
+        return Response({"error": "Invalid record parameters entered!"}, status=status.HTTP_400_BAD_REQUEST)
+
+
+def delete_record(request):
+    """
+    Deletes a single :class: `WebsiteRecord` object from the database.
+    @param request: the request that for routed to this API endpoint
+    @return: the request response
+    """
+    if 'record_id' in request.data:
+        try:
+            record_id = int(request.data['record_id'])
+        except ValueError:
+            return Response({"error": "Invalid record ID for deleting entered!"}, status=status.HTTP_400_BAD_REQUEST)
+        record = WebsiteRecord.objects.filter(id=record_id)
+        if record:
+            record.delete()
+            return Response({"message": "Record deleted successfully!"}, status=status.HTTP_200_OK)
+        return Response({"error": "Could not find and delete selected record."}, status=status.HTTP_400_BAD_REQUEST)
+    return Response({"error": "No Website Record ID for deleting provided!"}, status=status.HTTP_400_BAD_REQUEST)
+
+
+def get_record(request):
+    """
+    Retrieves details of a single :class: `WebsiteRecord`. Tag primary keys are swapped for their values.
+    @param request: the request of the record
+    @return: requested data, an error 404 if requested record could not be found,
+             error 400 if ID field was not found or is not numeric
+    """
+    if 'record' in request.query_params:
+        record = request.query_params.get('record')
+        if record.isnumeric():
+            record_id = int(record)
+            record = WebsiteRecord.objects.select_related().filter(pk=record_id)
+            if len(record) > 0:
+                json_serializer = serializers.get_serializer("json")
+                serializer = json_serializer()
+                tags = get_tags(record)
+                serialized = json.loads(serializer.serialize(record))
+                serialized[0]['fields']['tags'] = tags[record_id]
+                return Response(serialized, status=status.HTTP_200_OK)
+            return Response({"error": f"Record with ID {record_id} was not found!"}, status=status.HTTP_404_NOT_FOUND)
+    return Response(
+        {"error": "Invalid request! The request must contain the 'record' key with ID specified as a numeric value."},
+        status=status.HTTP_400_BAD_REQUEST)
+
+
+def update_record(request):
+    """
+    Updates a record data.
+    @param request: the request that for routed to this API endpoint
+    @return: the request response
+    """
+    json_data = json.dumps(request.data)
+    if WebsiteRecord.objects.update_record(json_data):
+        update_tags(request.data)
+        return Response({"message": f"Record was updated successfully!"}, status=status.HTTP_204_NO_CONTENT)
+    return Response({"error": "Invalid data! Record was not updated."}, status=status.HTTP_400_BAD_REQUEST)
+
+
+########################################################
+# Helper functions
 
 def has_tag(tags, target) -> bool:
     """

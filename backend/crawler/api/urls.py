@@ -18,15 +18,12 @@ schema_view = get_schema_view(
 
 urlpatterns = [
     path('graph/<record>/', views.get_graph, name='get_graph'),
-    path('record/add/', views.add_record, name='add_record'),
-    path('record/update/', views.update_record, name='update_record'),
-    path('record/get/', views.get_record, name='get_record'),
-    path('record/get/<page>/', views.get_records, name='get_records'),
-    path('record/delete/', views.delete_record, name='delete_record'),
+    path('record/', views.record_crud, name='record_crud'),
+    path('record/<page>/', views.get_records, name='get_records'),
     path('executions/<page>/', views.get_executions, name='get_executions'),
     path('execution/<record>/<page>/', views.get_execution, name='get_execution'),
     path('activate/<record>/', views.activate, name='activate_record'),
     path('deactivate/<record>/', views.deactivate, name='deactivate_record'),
-    path('celery/run/', views.run_celery, name='run_celery'),
+    path('celery/', views.run_celery, name='run_celery'),
     path('docs/', schema_view.with_ui('swagger', cache_timeout=0), name='api_docs')
 ]

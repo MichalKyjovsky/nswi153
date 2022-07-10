@@ -2,7 +2,7 @@ from django.test import TestCase
 from api.models import WebsiteRecord
 
 
-test_url = '/api/record/delete/'
+test_url = '/api/record/'
 
 
 class DeleteRecordTest(TestCase):

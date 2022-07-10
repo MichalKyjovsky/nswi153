@@ -3,7 +3,7 @@ from api.models import WebsiteRecord, Tag
 from rest_framework import status
 import json
 
-request_url = '/api/record/update/'
+request_url = '/api/record/'
 
 
 class UpdateRecordTest(TestCase):

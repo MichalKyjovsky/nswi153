@@ -2,7 +2,7 @@ from django.test import TestCase
 from api.models import WebsiteRecord, Tag
 
 
-request_url = '/api/record/add/'
+request_url = '/api/record/'
 content_type = "application/json"
 
 

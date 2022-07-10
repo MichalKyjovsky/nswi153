@@ -11,6 +11,14 @@ from .models import *
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 
+status_mapper = {
+    1: "IN PROGRESS",
+    2: "FINISHED",
+    3: "IN QUEUE",
+    4: "NEVER EXECUTED",
+    5: "UNKNOWN"  # for cases when something goes horribly wrong
+}
+
 OPTIONAL_CLAUSE = "Several filters can be used at the same time."
 SEE_ERROR = 'See the "error" key in the response for details.'
 
@@ -38,7 +46,39 @@ def get_graph(request, record):
 
 
 @swagger_auto_schema(
-    methods=['post'],
+    method='get',
+    operation_description='Returns details of a single `WebsiteRecord` object.',
+    manual_parameters=[
+        openapi.Parameter('record', openapi.IN_PATH, "The ID of the `WebsiteRecord` whose data are requested.",
+                          type=openapi.TYPE_INTEGER,
+                          required=True, example=42)
+    ],
+    responses={
+        200: openapi.Response('Record was returned.', examples={"application/json": [
+            {
+                'model': 'api.websiterecord',
+                'pk': 1,
+                'fields': {
+                    'url': 'http://www.google.com',
+                    'label': 'my_label',
+                    'interval': 120,
+                    'active': True,
+                    'regex': '.*',
+                    'tags': [
+                        'my_tag',
+                        'super_awersome_website',
+                        'third_tag'
+                    ]
+                }
+            }
+        ]}),
+        400: openapi.Response(
+            "Invalid request! The request must contain the 'record' key with ID specified as a numeric value."),
+        404: openapi.Response('Record with ID {record_id} was not found!')
+    },
+    tags=['Website Record'])
+@swagger_auto_schema(
+    method='put',
     operation_description='Adds a new `WebsiteRecord` to the database.',
     request_body=openapi.Schema(
         type=openapi.TYPE_OBJECT,
@@ -71,34 +111,45 @@ def get_graph(request, record):
         400: openapi.Response('When invalid record data was provided. ' + SEE_ERROR)
     },
     tags=['Website Record'])
-@api_view(['POST'])
-def add_record(request):
-    """
-    Adds a new :class: `WebsiteRecord` to the database.
-    @param request: the request that for routed to this API endpoint
-    @return: the request response
-    """
-    json_data = json.dumps(request.data)
-    try:
-        record = WebsiteRecord.objects.create_record(json_data)
-        tags = []
-        if 'tags' in request.data:
-            tags = [Tag.objects.create_tag(tag.strip()) for tag in request.data['tags'].split(',')]
-        with transaction.atomic():
-            # atomic to preserve consistency
-            record.save()
-            for tag in tags:
-                record.tags.add(tag)
-                tag.save()
-
-        return Response({"message": f"Record and its tags created successfully! (1 record, {len(tags)} tags)"},
-                        status=status.HTTP_201_CREATED)
-    except (ValueError, DatabaseError, IntegrityError, transaction.TransactionManagementError):
-        return Response({"error": "Invalid record parameters entered!"}, status=status.HTTP_400_BAD_REQUEST)
-
-
 @swagger_auto_schema(
-    methods=['delete'],
+    method='post',
+    operation_description='Updates details of a `WebsiteRecord` in the database.',
+    request_body=openapi.Schema(
+        type=openapi.TYPE_OBJECT,
+        required=['id'],
+        properties={
+            'id': openapi.Schema(type=openapi.TYPE_INTEGER,
+                                 description="A valid ID of the `WebsiteRecord` to be updated.",
+                                 example=69),
+            'url': openapi.Schema(type=openapi.TYPE_STRING,
+                                  description="The URL where the crawler shall start. "
+                                              + "Must be between 1 and 255 characters long.",
+                                  example="http://www.crawler.com"),
+            'label': openapi.Schema(type=openapi.TYPE_STRING,
+                                    description="The label of the to-be-created `WebsiteRecord`. "
+                                                + "1-2563 characters long.",
+                                    example="My first website record"),
+            'interval': openapi.Schema(type=openapi.TYPE_INTEGER,
+                                       description="Crawling interval (in seconds). Must be be a non-negative integer.",
+                                       example=3600),
+            'active': openapi.Schema(type=openapi.TYPE_BOOLEAN,
+                                     description="One of the values: `False` (deactivated) or `True` (activated).",
+                                     example=True),
+            'regex': openapi.Schema(type=openapi.TYPE_STRING,
+                                    description="A non-empty regex to define the URLs to be crawled next. "
+                                                + "If everything should be matched, use `.*`.",
+                                    example="crawler.com"),
+            'tags': openapi.Schema(type=openapi.TYPE_STRING,
+                                   description="A comma-separated list of the `WebsiteRecord`'s tags.",
+                                   example="awesome,crawl,quick")
+        }),
+    responses={
+        204: openapi.Response('Record was updated successfully!'),
+        400: openapi.Response('Invalid data! Record was not updated.'),
+    },
+    tags=['Website Record'])
+@swagger_auto_schema(
+    method='delete',
     operation_description='Deletes a `WebsiteRecord` from the database.',
     request_body=openapi.Schema(
         type=openapi.TYPE_OBJECT,
@@ -114,24 +165,20 @@ def add_record(request):
             'Invalid requested record (not an integer, ID not found or the record ID missing entirely. ' + SEE_ERROR)
     },
     tags=['Website Record'])
-@api_view(['DELETE'])
-def delete_record(request):
+@api_view(['GET', 'POST', 'PUT', 'DELETE'])
+def record_crud(request):
     """
-    Deletes a single :class: `WebsiteRecord` object from the database.
-    @param request: the request that for routed to this API endpoint
-    @return: the request response
+    A routing functions for processing record non-parameterized requests (not paginated get_records).
+    @param request: request to be handled
+    @return: the result of the corresponding operation
     """
-    if 'record_id' in request.data:
-        try:
-            record_id = int(request.data['record_id'])
-        except ValueError:
-            return Response({"error": "Invalid record ID for deleting entered!"}, status=status.HTTP_400_BAD_REQUEST)
-        record = WebsiteRecord.objects.filter(id=record_id)
-        if record:
-            record.delete()
-            return Response({"message": "Record deleted successfully!"}, status=status.HTTP_200_OK)
-        return Response({"error": "Could not find and delete selected record."}, status=status.HTTP_400_BAD_REQUEST)
-    return Response({"error": "No Website Record ID for deleting provided!"}, status=status.HTTP_400_BAD_REQUEST)
+    if request.method == 'GET':
+        return get_record(request)
+    if request.method == 'POST':
+        return update_record(request)
+    if request.method == 'DELETE':
+        return delete_record(request)
+    return add_record(request)
 
 
 @swagger_auto_schema(
@@ -162,17 +209,48 @@ def delete_record(request):
                           example="my-tag")
     ],
     responses={
-        200: openapi.Response('Records were returned.', examples={"application/json": {"records": [
-            {"model": "api.websiterecord", "pk": 6,
-             "fields": {"url": "http://www.amazon.com", "label": "amazon_crawl", "interval": 100, "active": "true",
-                        "regex": "www.amazon.com.*"}, "tags": ["a", "b", "c"]}, {"model": "api.websiterecord", "pk": 5,
-                                                                                 "fields": {
-                                                                                     "url": "http://www.google.com",
-                                                                                     "label": "my_label",
-                                                                                     "interval": 120, "active": "false",
-                                                                                     "regex": ".*"}, "tags": []}],
-            "total_pages": 1,
-            "total_records": 2}}),
+        200: openapi.Response('Records were returned.', examples={"application/json": {
+            'records': [
+                {
+                    'model': 'api.websiterecord',
+                    'pk': 6,
+                    'fields': {
+                        'url': 'http://www.amazon.com',
+                        'label': 'amazon_crawl',
+                        'interval': 100,
+                        'active': False,
+                        'regex': 'www.amazon.com.*'
+                    },
+                    'tags': [
+                        '2',
+                        'a',
+                        'c'
+                    ],
+                    'last_duration': 5000,
+                    'last_status': 'IN PROGRESS'
+                },
+                {
+                    'model': 'api.websiterecord',
+                    'pk': 5,
+                    'fields': {
+                        'url': 'http://www.google.com',
+                        'label': 'my_label',
+                        'interval': 120,
+                        'active': True,
+                        'regex': '.*'
+                    },
+                    'tags': [
+                        '1',
+                        '3',
+                        'b'
+                    ],
+                    'last_duration': 42,
+                    'last_status': 'FINISHED'
+                }
+            ],
+            'total_pages': 1,
+            'total_records': 2
+        }}),
         400: openapi.Response('Requested page of the list is invalid. ' + SEE_ERROR)
     },
     tags=['Website Record'])
@@ -192,24 +270,8 @@ def get_records(request, page):
     if type(response_dict) == Response:
         return response_dict
     response_dict = add_tags(response_dict, record_tags)
+    response_dict = add_execution_details(response_dict)
     return Response(response_dict, status=status.HTTP_200_OK)
-
-
-@swagger_auto_schema(
-    methods=['post'],
-    operation_description='Updates details of a `WebsiteRecord` in the database. Not implemented yet.',
-    responses={
-        200: openapi.Response('The record was updated successfully.'),
-    },
-    tags=['Website Record'])
-@api_view(['POST'])
-def update_record(request):
-    """
-    Updates a record data.
-    @param request: the request that for routed to this API endpoint
-    @return: the request response
-    """
-    pass
 
 
 @swagger_auto_schema(
@@ -226,26 +288,51 @@ def update_record(request):
     ],
     responses={
         200: openapi.Response('Executions were returned.', examples={
-            "application/json": {"executions": [{"model": "api.execution", "pk": 15,
-                                                 "fields": {"title": "Amazon purchases", "url": "www.amazon.com",
-                                                            "crawl_time": "2022-04-15T14:30:00Z", "website_record": 6},
-                                                 "links": 0}, {"model": "api.execution", "pk": 16,
-                                                               "fields": {"title": "Amazon purchases",
-                                                                          "url": "www.amazon.com",
-                                                                          "crawl_time": "2022-04-15T14:30:00Z",
-                                                                          "website_record": 6}, "links": 0},
-                                                {"model": "api.execution", "pk": 11,
-                                                 "fields": {"title": "Google browser", "url": "www.google.com",
-                                                            "crawl_time": "2022-04-15T13:30:59Z", "website_record": 5},
-                                                 "links": 0}, {"model": "api.execution", "pk": 13,
-                                                               "fields": {"title": "Google browser",
-                                                                          "url": "www.google.com",
-                                                                          "crawl_time": "2022-04-16T13:30:59Z",
-                                                                          "website_record": 5}, "links": 0},
-                                                {"model": "api.execution", "pk": 14,
-                                                 "fields": {"title": "Google browser", "url": "www.google.com",
-                                                            "crawl_time": "2022-04-17T13:30:59Z", "website_record": 5},
-                                                 "links": 0}], "total_pages": 1, "total_records": 5}}),
+            "application/json": {
+                'executions': [
+                    {
+                        'model': 'api.execution',
+                        'pk': 15,
+                        'fields': {
+                            'title': 'Amazon purchases',
+                            'url': 'www.amazon.com',
+                            'crawl_duration': 600,
+                            'last_crawl': '2022-04-15T14:30:00Z',
+                            'website_record': 6,
+                            'status': 'IN QUEUE'
+                        },
+                        'links': 0
+                    },
+                    {
+                        'model': 'api.execution',
+                        'pk': 11,
+                        'fields': {
+                            'title': 'Google browser',
+                            'url': 'www.google.com',
+                            'crawl_duration': 0,
+                            'last_crawl': None,
+                            'website_record': 5,
+                            'status': 'NEVER EXECUTED'
+                        },
+                        'links': 0
+                    },
+                    {
+                        'model': 'api.execution',
+                        'pk': 13,
+                        'fields': {
+                            'title': 'Google browser',
+                            'url': 'www.google.com',
+                            'crawl_duration': 69,
+                            'last_crawl': '2022-04-16T13:30:59Z',
+                            'website_record': 5,
+                            'status': 'IN PROGRESS'
+                        },
+                        'links': 0
+                    }
+                ],
+                'total_pages': 1,
+                'total_records': 3
+            }}),
         400: openapi.Response('Requested page of the list is invalid. ' + SEE_ERROR)
     },
     tags=['Execution'])
@@ -258,7 +345,7 @@ def get_executions(request, page):
     @return: the request response
     """
     page_size, page_num = get_page_data(request, page)
-    executions = Execution.objects.all().select_related()
+    executions = map_execution_status(Execution.objects.all().select_related())
     response_data = serialize_data(executions, "executions", page_size, page_num)
     if type(response_data) == Response:
         return response_data
@@ -292,15 +379,48 @@ def get_executions(request, page):
                           default=10),
     ],
     responses={
-        200: openapi.Response('Executions were returned.', examples={"application/json": {"executions": [
-            {"model": "api.execution", "pk": 11,
-             "fields": {"title": "Google browser", "url": "www.google.com", "crawl_time": "2022-04-15T13:30:59Z",
-                        "website_record": 5}}, {"model": "api.execution", "pk": 13,
-                                                "fields": {"title": "Google browser", "url": "www.google.com",
-                                                           "crawl_time": "2022-04-16T13:30:59Z", "website_record": 5}},
-            {"model": "api.execution", "pk": 14,
-             "fields": {"title": "Google browser", "url": "www.google.com", "crawl_time": "2022-04-17T13:30:59Z",
-                        "website_record": 5}}], "total_pages": 1, "total_records": 3}}),
+        200: openapi.Response('Executions were returned.', examples={"application/json": {
+            'executions': [
+                {
+                    'model': 'api.execution',
+                    'pk': 11,
+                    'fields': {
+                        'title': 'Google browser',
+                        'url': 'www.google.com',
+                        'crawl_duration': 0,
+                        'last_crawl': None,
+                        'website_record': 5,
+                        'status': 'NEVER EXECUTED'
+                    }
+                },
+                {
+                    'model': 'api.execution',
+                    'pk': 13,
+                    'fields': {
+                        'title': 'Google browser',
+                        'url': 'www.google.com',
+                        'crawl_duration': 69,
+                        'last_crawl': '2022-04-16T13:30:59Z',
+                        'website_record': 5,
+                        'status': 'IN PROGRESS'
+                    }
+                },
+                {
+                    'model': 'api.execution',
+                    'pk': 14,
+                    'fields': {
+                        'title': 'Google browser',
+                        'url': 'www.google.com',
+                        'crawl_duration': 42,
+                        'last_crawl': '2022-04-17T13:30:59Z',
+                        'website_record': 5,
+                        'status': 'FINISHED'
+                    }
+                }
+            ],
+            'total_pages': 1,
+            'total_records': 3
+        }}),
         400: openapi.Response('Invalid Record ID or page provided in the request. ' + SEE_ERROR)
     },
     tags=['Execution'])
@@ -314,16 +434,15 @@ def get_execution(request, record, page):
     @return: the request response
     """
     page_size, page_num = get_page_data(request, page)
-    try:
-        record_id = int(record)
-    except ValueError:
+    if not record.isnumeric():
         return Response({"error": f"Invalid Website Record ID {id}: an integer expect!"},
                         status=status.HTTP_400_BAD_REQUEST)
+    record_id = int(record)
     executions = Execution.objects.filter(website_record=record_id)
     if len(executions) == 0:
         return Response({"error": f"Executions for Website Record ID {record} were not found!"},
                         status=status.HTTP_400_BAD_REQUEST)
-    response_dict = serialize_data(executions, "executions", page_size, page_num)
+    response_dict = serialize_data(map_execution_status(executions), "executions", page_size, page_num)
     if type(response_dict) == Response:
         return response_dict
     return Response(response_dict, status=status.HTTP_200_OK)
@@ -391,8 +510,94 @@ def run_celery(quest):
     # TODO: to be implemented by @mkyjovsky including docs and tests
     pass
 
-########################################################
 
+########################################################
+# WebsiteRecord CRUD operations
+
+def add_record(request):
+    """
+    Adds a new :class: `WebsiteRecord` to the database.
+    @param request: the request that for routed to this API endpoint
+    @return: the request response
+    """
+    json_data = request.body.decode('utf-8')
+    try:
+        record = WebsiteRecord.objects.create_record(json_data)
+        tags = []
+        if 'tags' in request.data:
+            tags = [Tag.objects.create_tag(tag.strip()) for tag in request.data['tags'].split(',')]
+        with transaction.atomic():
+            # atomic to preserve consistency
+            record.save()
+            for tag in tags:
+                record.tags.add(tag)
+                tag.save()
+
+        return Response({"message": f"Record and its tags created successfully! (1 record, {len(tags)} tags)"},
+                        status=status.HTTP_201_CREATED)
+    except (ValueError, DatabaseError, IntegrityError, transaction.TransactionManagementError):
+        return Response({"error": "Invalid record parameters entered!"}, status=status.HTTP_400_BAD_REQUEST)
+
+
+def delete_record(request):
+    """
+    Deletes a single :class: `WebsiteRecord` object from the database.
+    @param request: the request that for routed to this API endpoint
+    @return: the request response
+    """
+    if 'record_id' in request.data:
+        try:
+            record_id = int(request.data['record_id'])
+        except ValueError:
+            return Response({"error": "Invalid record ID for deleting entered!"}, status=status.HTTP_400_BAD_REQUEST)
+        record = WebsiteRecord.objects.filter(id=record_id)
+        if record:
+            record.delete()
+            return Response({"message": "Record deleted successfully!"}, status=status.HTTP_200_OK)
+        return Response({"error": "Could not find and delete selected record."}, status=status.HTTP_400_BAD_REQUEST)
+    return Response({"error": "No Website Record ID for deleting provided!"}, status=status.HTTP_400_BAD_REQUEST)
+
+
+def get_record(request):
+    """
+    Retrieves details of a single :class: `WebsiteRecord`. Tag primary keys are swapped for their values.
+    @param request: the request of the record
+    @return: requested data, an error 404 if requested record could not be found,
+             error 400 if ID field was not found or is not numeric
+    """
+    if 'record' in request.query_params:
+        record = request.query_params.get('record')
+        if record.isnumeric():
+            record_id = int(record)
+            record = WebsiteRecord.objects.select_related().filter(pk=record_id)
+            if len(record) > 0:
+                json_serializer = serializers.get_serializer("json")
+                serializer = json_serializer()
+                tags = get_tags(record)
+                serialized = json.loads(serializer.serialize(record))
+                serialized[0]['fields']['tags'] = tags[record_id]
+                return Response(serialized, status=status.HTTP_200_OK)
+            return Response({"error": f"Record with ID {record_id} was not found!"}, status=status.HTTP_404_NOT_FOUND)
+    return Response(
+        {"error": "Invalid request! The request must contain the 'record' key with ID specified as a numeric value."},
+        status=status.HTTP_400_BAD_REQUEST)
+
+
+def update_record(request):
+    """
+    Updates a record data.
+    @param request: the request that for routed to this API endpoint
+    @return: the request response
+    """
+    json_data = json.dumps(request.data)
+    if WebsiteRecord.objects.update_record(json_data):
+        update_tags(request.data)
+        return Response({"message": f"Record was updated successfully!"}, status=status.HTTP_204_NO_CONTENT)
+    return Response({"error": "Invalid data! Record was not updated."}, status=status.HTTP_400_BAD_REQUEST)
+
+
+########################################################
+# Helper functions
 
 def has_tag(tags, target) -> bool:
     """
@@ -479,8 +684,8 @@ def serialize_data(records, key, page_size, page_num):
     @param page_num: page to be serialized
     @return: paginated and serialized data
     """
-    JSONserializer = serializers.get_serializer("json")
-    serializer = JSONserializer()
+    json_serializer = serializers.get_serializer("json")
+    serializer = json_serializer()
     records = Paginator(records, page_size)
     if page_num > records.num_pages or page_num < 1:
         return Response({"error": f"Invalid page {page_num}!"}, status=status.HTTP_400_BAD_REQUEST)
@@ -500,6 +705,7 @@ def add_tags(response_dict, record_tags):
         pk = model['pk']
         if pk in record_tags:
             model['tags'] = record_tags[pk]
+        del model['fields']['tags']
     return response_dict
 
 
@@ -524,3 +730,62 @@ def do_activation(record, value, log):
     record.active = value
     record.save()
     return Response({"message": f"Website Record with ID {record_id} was {log}."}, status=status.HTTP_200_OK)
+
+
+def map_execution_status(executions):
+    """
+    Maps execution statuses from int values to human-readable values.
+    @param executions: an iterable containing :class: `Execution` instances to be mapped
+    @return: the same executions, but with status mapped from ints to human-readable strings
+    """
+    for execution in executions:
+        state = execution.status
+        if type(state) is not int or int(state) < 1 or int(state) > 5:
+            state = 5
+        execution.status = status_mapper[int(state)]
+    return executions
+
+
+def update_tags(data) -> None:
+    """
+    Updates the tags of the :class: `WebsiteRecord` specified in the data under key 'id'.
+    @param data: the data with record ID and tags to be added/removed for the record
+    """
+    if 'tags' in data:
+        record = WebsiteRecord.objects.select_related().filter(pk=data['id'])[0]  # get record and its tags
+        new_tags = set(data['tags'].split(','))  # a set of tags that we want to have associated at the end
+
+        for tag in record.tags.all():
+            if tag.tag in new_tags:
+                # preserved tag
+                new_tags.remove(tag.tag)  # remove from our consideration - was present, will be present
+            else:
+                # removed tag
+                record.tags.remove(tag)  # remove reference from WebsiteRecord
+                tag.delete()  # remove from DB
+
+        created_tags = []
+        for tag in new_tags:
+            # added tag
+            added_tag = Tag.objects.create_tag(tag.strip())
+            created_tags.append(added_tag)  # add to list for later save operation
+            record.tags.add(added_tag)  # add new tag
+
+        with transaction.atomic():
+            # atomic to preserve consistency
+            record.save()  # save tag changes
+            for tag in created_tags:
+                tag.save()
+
+
+def add_execution_details(response_dict):
+    for model in response_dict['records']:
+        pk = model['pk']
+        executions = Execution.objects.filter(website_record=pk).order_by('-id')  # sort by ID DESC
+        if len(executions) > 0:
+            model['last_duration'] = executions[0].crawl_duration
+            model['last_status'] = status_mapper[executions[0].status]
+        else:
+            model['last_duration'] = 'N/A'
+            model['last_status'] = status_mapper[4]
+    return response_dict

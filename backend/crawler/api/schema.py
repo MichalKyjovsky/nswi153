@@ -36,7 +36,6 @@ class WebsiteRecordType(DjangoObjectType):
 
     @staticmethod
     def resolve_tags(website_record, *args, **kwargs):
-        # return Tag.objects.filter(website_record_id=info.id).all()
         return website_record.tags.all()
 
 
@@ -65,7 +64,6 @@ class Query(graphene.ObjectType):
 
     def resolve_nodes_by_ids(self, info, web_pages):
         return Node.objects.filter(owner__in=web_pages).all()
-        # return Node.objects.all()
 
 
 schema = graphene.Schema(query=Query)

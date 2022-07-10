@@ -71,8 +71,10 @@
     "fields": {
       "title": "Google browser",
       "url": "www.google.com",
-      "crawl_time": "2022-04-15T14:30:59+01:00",
-      "website_record": 5
+      "crawl_duration": 0,
+      "last_crawl": null,
+      "website_record": 5,
+      "status": 4
     }
   },
   {
@@ -81,8 +83,10 @@
     "fields": {
       "title": "Google browser",
       "url": "www.google.com",
-      "crawl_time": "2022-04-16T14:30:59+01:00",
-      "website_record": 5
+      "crawl_duration": 69,
+      "last_crawl": "2022-04-16T14:30:59+01:00",
+      "website_record": 5,
+      "status": 1
     }
   },
   {
@@ -91,8 +95,10 @@
     "fields": {
       "title": "Google browser",
       "url": "www.google.com",
-      "crawl_time": "2022-04-17T14:30:59+01:00",
-      "website_record": 5
+      "crawl_duration": 42,
+      "last_crawl": "2022-04-17T14:30:59+01:00",
+      "website_record": 5,
+      "status": 2
     }
   },
   {
@@ -101,8 +107,10 @@
     "fields": {
       "title": "Amazon purchases",
       "url": "www.amazon.com",
-      "crawl_time": "2022-04-15T15:30:00+01:00",
-      "website_record": 6
+      "crawl_duration": 600,
+      "last_crawl": "2022-04-15T15:30:00+01:00",
+      "website_record": 6,
+      "status": 3
     }
   },
   {
@@ -111,8 +119,10 @@
     "fields": {
       "title": "Amazon purchases",
       "url": "www.amazon.com",
-      "crawl_time": "2022-04-15T15:30:00+01:00",
-      "website_record": 6
+      "crawl_duration": 5000,
+      "last_crawl": "2022-04-15T15:30:00+01:00",
+      "website_record": 6,
+      "status": 1
     }
   },
   {

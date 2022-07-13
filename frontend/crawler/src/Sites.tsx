@@ -16,161 +16,151 @@ import TablePaginationActions from './TablePaginationActions';
 import Checkbox from '@mui/material/Checkbox';
 import TableSortLabel from '@mui/material/TableSortLabel';
 import { visuallyHidden } from '@mui/utils';
-import FilterListIcon from '@mui/icons-material/FilterList';
+import Chip from '@mui/material/Chip';
+import IconButton from '@mui/material/IconButton';
+import EditIcon from '@mui/icons-material/Edit';
+import DeleteIcon from '@mui/icons-material/Delete';
 import TextField from '@mui/material/TextField';
+import Button from '@mui/material/Button';
+import Dialog from '@mui/material/Dialog';
+import DialogActions from '@mui/material/DialogActions';
+import DialogContent from '@mui/material/DialogContent';
+import DialogContentText from '@mui/material/DialogContentText';
+import DialogTitle from '@mui/material/DialogTitle';
 import SitesToolbar from './SitesToolbar';
 import NewSiteModal from './EditSiteModal';
-import { WebsiteRecord, emptyWebsiteRecord } from './Common';
-
-interface Data {
-    url: string;
-    label: string;
-    interval: number;
-    status: boolean;
-    regex: string;
-}
-
-function createData(
-    url: string,
-    label: string,
-    interval: number,
-    status: boolean,
-    regex: string,
-): Data {
-    return {
-        url,
-        label,
-        interval,
-        status,
-        regex,
-    };
-}
-
-// let rows: Data[] = [];
-// for (let i = 0; i < 20; i++) {
-//     rows.push(createData('example.org', 'Example', 42, true, "./*"));
-// }
-
-function descendingComparator<T>(a: T, b: T, orderBy: keyof T) {
-    if (b[orderBy] < a[orderBy]) {
-        return -1;
-    }
-    if (b[orderBy] > a[orderBy]) {
-        return 1;
-    }
-    return 0;
-}
+import { WebsiteRecord, emptyWebsiteRecord, createWebsiteRecord, WebsiteRecordForView, createWebsiteRecordForView, toPeriodicityString } from './Common';
 
 type Order = 'asc' | 'desc';
 
-function getComparator<Key extends keyof any>(
-    order: Order,
-    orderBy: Key,
-): (
-        a: { [key in Key]: number | string | boolean },
-        b: { [key in Key]: number | string | boolean },
-    ) => number {
-    return order === 'desc'
-        ? (a, b) => descendingComparator(a, b, orderBy)
-        : (a, b) => -descendingComparator(a, b, orderBy);
-}
-
 interface HeadCell {
     disablePadding: boolean;
-    id: keyof Data;
+    id: keyof WebsiteRecordForView;
     label: string;
-    numeric: boolean;
+    align: "left" | "right" | "center";
     canFilter: boolean;
     canOrder: boolean;
+    width?: number;
 }
 
 const headCells: readonly HeadCell[] = [
     {
         id: 'label',
-        numeric: false,
-        disablePadding: true,
+        align: "left",
+        disablePadding: false,
         label: 'Label',
         canFilter: true,
         canOrder: true,
     },
     {
         id: 'url',
-        numeric: false,
+        align: "left",
         disablePadding: false,
         label: 'URL',
         canFilter: true,
         canOrder: true,
     },
     {
-        id: 'interval',
-        numeric: true,
+        id: 'periodicity',
+        align: "left",
         disablePadding: false,
         label: 'Periodicity',
         canFilter: false,
-        canOrder: true,
+        canOrder: false,
+        width: 130
     },
     {
-        id: 'status',
-        numeric: false,
+        id: 'active',
+        align: "left",
         disablePadding: false,
         label: 'Active',
-        canFilter: true,
-        canOrder: true,
-    },
-    {
-        id: 'regex',
-        numeric: false,
-        disablePadding: false,
-        label: 'Regex',
         canFilter: false,
         canOrder: false,
+        width: 75
+    },
+    {
+        id: 'tags',
+        align: "left",
+        disablePadding: false,
+        label: 'Tags',
+        canFilter: true,
+        canOrder: false,
+    },
+    {
+        id: 'lastExecutionTime',
+        align: "left",
+        disablePadding: false,
+        label: 'Last execution time',
+        canFilter: false,
+        canOrder: false,
+        width: 175
+    },
+    {
+        id: 'lastExecutionStatus',
+        align: "left",
+        disablePadding: false,
+        label: 'Last execution status',
+        canFilter: false,
+        canOrder: false,
+        width: 175
+    },
+    {
+        id: 'actions',
+        align: "left",
+        disablePadding: false,
+        label: 'Actions',
+        canFilter: false,
+        canOrder: false,
+        width: 112
     },
 ];
 
 interface SitesTableHeadProps {
-    numSelected: number;
-    onRequestSort: (event: React.MouseEvent<unknown>, property: keyof Data) => void;
-    onSelectAllClick: (event: React.ChangeEvent<HTMLInputElement>) => void;
+    onRequestSort: (event: React.MouseEvent<unknown>, property: keyof WebsiteRecordForView) => void;
     order: Order;
     orderBy: string;
-    rowCount: number;
     filterListShown: boolean;
+    onRequestFilter: (filterBy: keyof WebsiteRecordForView, filterPhrase: string) => void;
 }
 
 function SitesTableHead(props: SitesTableHeadProps) {
-    const { onSelectAllClick, order, orderBy, numSelected, rowCount, onRequestSort, filterListShown } = props;
-    const createSortHandler = (property: keyof Data) => (event: React.MouseEvent<unknown>) => {
+    const { order, orderBy, onRequestSort, filterListShown, onRequestFilter } = props;
+
+    const [filters, setFilters] = React.useState<string[]>(Array.from({ length: headCells.length }).map(x => ""));
+    const createSortHandler = (property: keyof WebsiteRecordForView) => (event: React.MouseEvent<unknown>) => {
         onRequestSort(event, property);
+    };
+    const createFilterHandler = (property: keyof WebsiteRecordForView, index: number) => (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === "Enter") {
+            e.preventDefault();
+            onRequestFilter(property, filters[index]);
+        }
+    }
+
+    const createChangeHandler = (index: number) => (event: React.ChangeEvent<HTMLInputElement>) => {
+        const newArray = filters.slice();
+        newArray[index] = event.target.value;
+        setFilters(newArray);
     };
 
     return (
         <TableHead>
-            {filterListShown && (<TableRow>
-                <TableCell align={'center'}><div style={{ verticalAlign: 'middle', display: 'inline-block', height: '24px' }}><FilterListIcon /></div></TableCell>
-                {headCells.map((headCell) => (
-                    <TableCell>
-                        {headCell.canFilter && (<TextField label={headCell.label} variant="standard" />)}
-                    </TableCell>))}
-            </TableRow>)
+            {filterListShown && (
+                <TableRow>
+                    {headCells.map((headCell, idx) => (
+                        <TableCell key={`filter-${headCell.id}`}>
+                            {headCell.canFilter && (<TextField label={headCell.label} onKeyPress={createFilterHandler(headCell.id, idx)} value={filters[idx]} onChange={createChangeHandler(idx)} variant="standard" />)}
+                        </TableCell>))}
+                </TableRow>)
             }
             <TableRow>
-                <TableCell padding="checkbox">
-                    <Checkbox
-                        color="primary"
-                        indeterminate={numSelected > 0 && numSelected < rowCount}
-                        checked={rowCount > 0 && numSelected === rowCount}
-                        onChange={onSelectAllClick}
-                        inputProps={{
-                            'aria-label': 'select all desserts',
-                        }}
-                    />
-                </TableCell>
                 {headCells.map((headCell) => (
                     <TableCell
                         key={headCell.id}
-                        align={headCell.numeric ? 'right' : 'left'}
+                        align={headCell.align}
                         padding={headCell.disablePadding ? 'none' : 'normal'}
                         sortDirection={orderBy === headCell.id ? order : false}
+                        width={headCell.width}
                     >
                         {headCell.canOrder ? (
                             <TableSortLabel
@@ -192,6 +182,27 @@ function SitesTableHead(props: SitesTableHeadProps) {
     );
 }
 
+interface ResponseRecordPage {
+    model: string,
+    pk: number,
+    fields: {
+        url: string,
+        label: string,
+        interval: number,
+        active: boolean,
+        regex: string
+    },
+    tags: string[],
+    last_duration: number,
+    last_status: string
+}
+
+interface ResponseData {
+    records: ResponseRecordPage[],
+    total_pages: number,
+    total_records: number
+}
+
 interface ResponseRecord {
     model: string,
     pk: number,
@@ -200,19 +211,13 @@ interface ResponseRecord {
         label: string,
         interval: number,
         status: number,
-        regex: string
-    },
-    tags: string[]
-}
-
-interface ResponseData {
-    records: ResponseRecord[],
-    total_pages: number,
-    total_records: number
+        regex: string,
+        tags: string[]
+    }
 }
 
 interface WebsiteResponse {
-    records: Data[],
+    records: WebsiteRecordForView[],
     totalPages: number,
     totalRecords: number
 }
@@ -228,16 +233,17 @@ class WebsiteRecordManager {
         });
     }
 
-    async get(pageSize: number, pageNumber: number,): Promise<WebsiteResponse | null> {
+    async getPage(pageSize: number, pageNumber: number, labelFilter: string): Promise<WebsiteResponse | null> {
         try {
             const response = await this.inst.get(`record/${pageNumber + 1}/`, {
                 params: {
-                    page_size: pageSize
+                    page_size: pageSize,
+                    "label-filter": labelFilter.trim().length > 0 ? labelFilter.trim() : undefined,
                 }
             });
             const data: ResponseData = response.data;
             return {
-                records: data.records.map(rec => createData(rec.fields.url, rec.fields.label, rec.fields.interval, rec.fields.status === 1 ? true : false, rec.fields.regex)),
+                records: data.records.map(rec => createWebsiteRecordForView(rec.pk, rec.fields.url, rec.fields.label, toPeriodicityString(rec.fields.interval), rec.fields.active, rec.tags, rec.last_duration + "", rec.last_status)),
                 totalPages: data.total_pages,
                 totalRecords: data.total_records
             };
@@ -246,32 +252,60 @@ class WebsiteRecordManager {
         }
         return null;
     }
+
+    async getRecord(id: number): Promise<WebsiteRecord | null> {
+        try {
+            const response = await this.inst.get("record/", {
+                params: {
+                    record: id
+                }
+            });
+            const data: ResponseRecord[] = response.data;
+            console.log("Get record data: ", data);
+            const transformed = data.map(rec => createWebsiteRecord(rec.fields.url, rec.fields.label, rec.fields.interval, rec.fields.status === 1 ? true : false, rec.fields.regex, rec.fields.tags, rec.pk));
+            console.log("Transformed data: ", transformed);
+            return transformed.length > 0 ? transformed[0] : null;
+        } catch (error) {
+            console.error(error);
+        }
+        return null;
+    }
+
+    async deleteRecord(id: number) {
+        const response = await this.inst.delete("record/", {
+            data: {
+                record_id: id
+            }
+        });
+    }
 }
 
 function SitesContent() {
     const [page, setPage] = React.useState(0);
     const [rowsPerPage, setRowsPerPage] = React.useState(5);
     const [filterListShown, setFilterListShown] = React.useState(false);
-    const [rows, setRows] = React.useState<Data[]>([]);
+    const [rows, setRows] = React.useState<WebsiteRecordForView[]>([]);
     const [totalRecords, setTotalRecords] = React.useState(0);
     const [editModalOpen, setEditModalOpen] = React.useState(false);
     const [editedRecord, setEditedRecord] = React.useState<WebsiteRecord>(emptyWebsiteRecord());
+    const [confirmDeleteOpen, setConfirmDeleteOpen] = React.useState(false);
+    const [deletedRecord, setDeletedRecord] = React.useState(0);
+    const [labelFilter, setLabelFilter] = React.useState("");
 
     /** Enhanced table props */
     const [order, setOrder] = React.useState<Order>('asc');
-    const [orderBy, setOrderBy] = React.useState<keyof Data>('label');
-    const [selected, setSelected] = React.useState<readonly string[]>([]);
+    const [orderBy, setOrderBy] = React.useState<keyof WebsiteRecordForView>('label');
 
-    const manager = new WebsiteRecordManager();
-    const getRows = async (pageSize: number, pageNumber: number) => {
-        const response = await manager.get(pageSize, pageNumber);
+    const manager = React.useMemo(() => new WebsiteRecordManager(), []);
+    const getRows = React.useCallback(async (pageSize: number, pageNumber: number, lblFilter: string) => {
+        const response = await manager.getPage(pageSize, pageNumber, lblFilter);
         setRows(response ? response.records : []);
         response && setTotalRecords(response.totalRecords);
-    };
+    }, [manager]);
 
     React.useEffect(() => {
-        getRows(rowsPerPage, page);
-    }, [page, rowsPerPage]);
+        getRows(rowsPerPage, page, labelFilter);
+    }, [page, rowsPerPage, labelFilter, getRows]);
 
     // Avoid a layout jump when reaching the last page with empty rows.
     const emptyRows = totalRecords > rowsPerPage ? rowsPerPage - rows.length : 0;
@@ -287,49 +321,56 @@ function SitesContent() {
 
     const handleRequestSort = (
         event: React.MouseEvent<unknown>,
-        property: keyof Data,
+        property: keyof WebsiteRecordForView,
     ) => {
         const isAsc = orderBy === property && order === 'asc';
         setOrder(isAsc ? 'desc' : 'asc');
         setOrderBy(property);
     };
 
-    const handleSelectAllClick = (event: React.ChangeEvent<HTMLInputElement>) => {
-        if (event.target.checked) {
-            const newSelecteds = rows.map((n) => n.label);
-            setSelected(newSelecteds);
-            return;
+    const handleRequestFilter = (
+        property: keyof WebsiteRecordForView,
+        value: string
+    ) => {
+        if (property === "label") {
+            setLabelFilter(value);
         }
-        setSelected([]);
     };
 
-    const handleClick = (event: React.MouseEvent<unknown>, name: string) => {
-        const selectedIndex = selected.indexOf(name);
-        let newSelected: readonly string[] = [];
-
-        if (selectedIndex === -1) {
-            newSelected = newSelected.concat(selected, name);
-        } else if (selectedIndex === 0) {
-            newSelected = newSelected.concat(selected.slice(1));
-        } else if (selectedIndex === selected.length - 1) {
-            newSelected = newSelected.concat(selected.slice(0, -1));
-        } else if (selectedIndex > 0) {
-            newSelected = newSelected.concat(
-                selected.slice(0, selectedIndex),
-                selected.slice(selectedIndex + 1),
-            );
+    const handleCloseEditModal = (success: boolean) => {
+        setEditModalOpen(false);
+        if (success) {
+            getRows(rowsPerPage, page, labelFilter);
         }
-
-        setSelected(newSelected);
-    };
-
-    const handleCloseEditModal = () => setEditModalOpen(false);
+    }
     const handleAddRecordClick = () => {
         setEditedRecord(emptyWebsiteRecord());
         setEditModalOpen(true);
     }
+    const handleEditRecordClick = async (id: number) => {
+        const record = await manager.getRecord(id);
+        if (record) {
+            setEditedRecord(record);
+            setEditModalOpen(true);
+        }
+    }
 
-    const isSelected = (name: string) => selected.indexOf(name) !== -1;
+    const handleRecordDeleteClick = (id: number) => {
+        setDeletedRecord(id);
+        setConfirmDeleteOpen(true);
+    };
+
+    const handleRecordDeleteClose = async (shouldDelete: boolean) => {
+        setConfirmDeleteOpen(false);
+        if (shouldDelete) {
+            try {
+                await manager.deleteRecord(deletedRecord);
+            } catch (error) {
+                console.log(error);
+            }
+            getRows(rowsPerPage, page, labelFilter);
+        }
+    };
     /* Enhanced table props end */
 
     return (
@@ -339,60 +380,71 @@ function SitesContent() {
                 sx={{
                     backgroundColor: (theme) => theme.palette.grey[100],
                     flexGrow: 1,
-                    height: '100vh',
+                    //height: '100vh',
                     overflow: 'auto',
                 }}
             >
-                <Container maxWidth="lg" sx={{ mt: 2, mb: 2 }}>
-                    <SitesToolbar numSelected={selected.length} toggleFilterList={setFilterListShown} addButtonClick={handleAddRecordClick} deleteButtonClick={() => { }} />
+                <Container maxWidth={false} sx={{ mt: 2, mb: 2, minWidth: 800, maxWidth: 1600 }}>
+                    <SitesToolbar toggleFilterList={setFilterListShown} addButtonClick={handleAddRecordClick} />
                     <TableContainer component={Paper} >
                         {editModalOpen && <NewSiteModal handleClose={handleCloseEditModal} record={editedRecord} />}
-                        <Table sx={{ minWidth: 500 }} aria-label="custom pagination table" size={'small'}>
+                        {confirmDeleteOpen && (
+                            <Dialog
+                                open={true}
+                                onClose={() => handleRecordDeleteClose(false)}
+                            >
+                                <DialogTitle>{"Confirm delete"}</DialogTitle>
+                                <DialogContent>
+                                    <DialogContentText>
+                                        Are you sure you want to delete this website record?
+                                    </DialogContentText>
+                                </DialogContent>
+                                <DialogActions>
+                                    <Button onClick={() => handleRecordDeleteClose(true)}>Delete</Button>
+                                    <Button onClick={() => handleRecordDeleteClose(false)} autoFocus>
+                                        Cancel
+                                    </Button>
+                                </DialogActions>
+                            </Dialog>)
+                        }
+                        <Table sx={{ minWidth: 500 }} size={'small'}>
                             <SitesTableHead
-                                numSelected={selected.length}
                                 order={order}
                                 orderBy={orderBy}
-                                onSelectAllClick={handleSelectAllClick}
                                 onRequestSort={handleRequestSort}
-                                rowCount={rows.length}
+                                onRequestFilter={handleRequestFilter}
                                 filterListShown={filterListShown}
                             />
                             <TableBody>
-                                {rows.map((row, index) => {
-                                    const isItemSelected = isSelected(row.label);
-                                    const labelId = `enhanced-table-checkbox-${index}`;
-
+                                {rows.map((row: WebsiteRecordForView, index: number) => {
                                     return (
                                         <TableRow
                                             hover
-                                            onClick={(event) => handleClick(event, row.label)}
-                                            role="checkbox"
-                                            aria-checked={isItemSelected}
                                             tabIndex={-1}
                                             key={row.label}
-                                            selected={isItemSelected}
                                         >
-                                            <TableCell padding="checkbox">
-                                                <Checkbox
-                                                    color="primary"
-                                                    checked={isItemSelected}
-                                                    inputProps={{
-                                                        'aria-labelledby': labelId,
-                                                    }}
-                                                />
-                                            </TableCell>
-                                            <TableCell
-                                                component="th"
-                                                id={labelId}
-                                                scope="row"
-                                                padding="none"
-                                            >
-                                                {row.label}
-                                            </TableCell>
+                                            <TableCell>{row.label}</TableCell>
                                             <TableCell>{row.url}</TableCell>
-                                            <TableCell align="right">{row.interval}</TableCell>
-                                            <TableCell ><Checkbox checked={row.status} /></TableCell>
-                                            <TableCell >{row.regex}</TableCell>
+                                            <TableCell>{row.periodicity}</TableCell>
+                                            <TableCell><Checkbox checked={row.active} /></TableCell>
+                                            <TableCell>
+                                                {
+                                                    row.tags.map((tag: string, tagIndex: number) =>
+                                                        <Chip
+                                                            sx={{ ml: "1px", mr: "1px" }}
+                                                            label={tag}
+                                                            variant="outlined"
+                                                            key={`itm-${index}-tag-${tagIndex}`}
+                                                        />
+                                                    )
+                                                }
+                                            </TableCell>
+                                            <TableCell>{row.lastExecutionTime}</TableCell>
+                                            <TableCell>{row.lastExecutionStatus}</TableCell>
+                                            <TableCell>
+                                                <IconButton onClick={() => handleEditRecordClick(row.pk)}><EditIcon /></IconButton>
+                                                <IconButton onClick={() => handleRecordDeleteClick(row.pk)}><DeleteIcon /></IconButton>
+                                            </TableCell>
                                         </TableRow>
                                     );
                                 })}
@@ -414,12 +466,6 @@ function SitesContent() {
                                         count={totalRecords}
                                         rowsPerPage={rowsPerPage}
                                         page={page}
-                                        // SelectProps={{
-                                        //     inputProps: {
-                                        //         'aria-label': 'rows per page',
-                                        //     },
-                                        //     native: true,
-                                        // }}
                                         onPageChange={handleChangePage}
                                         onRowsPerPageChange={handleChangeRowsPerPage}
                                         ActionsComponent={TablePaginationActions}

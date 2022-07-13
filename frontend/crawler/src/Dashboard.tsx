@@ -16,7 +16,7 @@ function DashboardContent() {
               ? theme.palette.grey[100]
               : theme.palette.grey[900],
           flexGrow: 1,
-          height: '100vh',
+          //height: '100vh',
           overflow: 'auto',
         }}
       >
@@ -35,7 +35,7 @@ function DashboardContent() {
               >
                 <div>Chart was supposed to be here.</div>
               </Paper>
-            </Grid>            
+            </Grid>
           </Grid>
         </Container>
       </Box>

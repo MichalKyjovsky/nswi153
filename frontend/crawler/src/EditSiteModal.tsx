@@ -12,7 +12,8 @@ import SaveIcon from '@mui/icons-material/Save';
 import AddIcon from '@mui/icons-material/Add';
 import NoItemIcon from '@mui/icons-material/Block';
 import Chip from '@mui/material/Chip';
-import { blue, red } from '@mui/material/colors';
+import { blue, red, green } from '@mui/material/colors';
+import axios from 'axios';
 import { WebsiteRecord } from './Common';
 
 const style = {
@@ -76,6 +77,8 @@ export default function NewSiteModal(props: EditSiteModalProps) {
     const [tags, setTags] = React.useState(record.tags);
     const [newTag, setNewTag] = React.useState('');
 
+    const isEdit = record.pk !== undefined;
+
     const handleUrl = (event: React.ChangeEvent<HTMLInputElement>) => {
         setUrl(event.target.value);
     }
@@ -109,6 +112,53 @@ export default function NewSiteModal(props: EditSiteModalProps) {
         setNewTag('');
     }
 
+    const handleTagKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === "Enter") {
+            e.preventDefault();
+            handleAddTag();
+        }
+    }
+
+    const handleSave = async () => {
+        // verify data are ok
+        const inst = axios.create({
+            baseURL: 'http://localhost:8000/api/',
+            timeout: 10000
+        });
+
+        const data = {
+            id: record.pk,
+            url,
+            label,
+            interval: fromPeriodicityString(interval),
+            active,
+            regex,
+            tags: tags.join(",")
+        };
+
+        try {
+            if (isEdit) {
+                console.log("Updating this: ", JSON.stringify(data));
+                const response = await inst.post("record/", data);
+                if (response.status > 204) {
+                    // show error
+                    console.log(response);
+                }
+            } else {
+                console.log("Inserting this: ", JSON.stringify(data));
+                const response = await inst.put("record/", data);
+                if (response.status > 201) {
+                    // show error
+                    console.log(response);
+                }
+            }
+
+            handleClose();
+        } catch (error) {
+            console.error(error);
+        }
+    }
+
     return (
         <div>
             <Modal
@@ -118,7 +168,7 @@ export default function NewSiteModal(props: EditSiteModalProps) {
             >
                 <Box sx={style}>
                     <Typography id="modal-modal-title" variant="h6" component="h2">
-                        {record.pk ? "Update" : "Add a new"} website record
+                        {isEdit ? "Update" : "Add a new"} website record
                     </Typography>
                     <TextField
                         required
@@ -171,25 +221,33 @@ export default function NewSiteModal(props: EditSiteModalProps) {
                                 label={value}
                                 variant="outlined"
                                 onDelete={() => handleDeleteTag(index)}
+                                key={index}
                             />
                         )) :
-                            <Chip icon={<NoItemIcon />} label="No tags were added" />
+                            <Chip icon={<NoItemIcon />} label="No tags were added" key={0} />
 
                         }
                     </Stack>
-                    <Stack direction="row" spacing={2} justifyContent="flex-start" alignItems={"center"}>
+                    <Stack direction="row" spacing={2} justifyContent="space-between" alignItems={"center"} >
                         <TextField
                             id="tag"
                             label="Add a new tag"
-                            fullWidth
-                            sx={textFieldStyle}
+                            sx={{ ...textFieldStyle, flexGrow: 1 }}
                             value={newTag}
                             onChange={handleNewTag}
+                            onKeyPress={handleTagKeyPress}
                         />
-                        <IconButton onClick={handleAddTag}><AddIcon /></IconButton>
+                        <Button
+                            variant="outlined"
+                            sx={{ color: green[500], width: 120, borderColor: green[500] }}
+                            startIcon={<AddIcon />}
+                            onClick={handleAddTag}
+                        >
+                            Add tag
+                        </Button>
                     </Stack>
                     <Stack direction="row" spacing={2} justifyContent="flex-end">
-                        <Button variant="contained" sx={{ backgroundColor: blue[500] }} startIcon={<SaveIcon />}>Save</Button>
+                        <Button variant="contained" sx={{ backgroundColor: blue[500] }} startIcon={<SaveIcon />} onClick={handleSave}>Save</Button>
                         <Button variant="contained" sx={{ backgroundColor: red[500] }} onClick={handleClose}>Cancel</Button>
                     </Stack>
                 </Box>

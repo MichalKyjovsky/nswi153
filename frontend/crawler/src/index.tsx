@@ -4,6 +4,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Core from './Core';
 import Sites from './Sites';
 import Dashboard from './Dashboard';
+import Executions from "./Executions";
 
 ReactDOM.render(
   <BrowserRouter>
@@ -12,6 +13,7 @@ ReactDOM.render(
         <Route path="/" element={<Dashboard />} />
         <Route path="/home" element={<Dashboard />} />
         <Route path="/sites" element={<Sites />} />
+        <Route path="/executions" element={<Executions />} />
       </Route>
     </Routes>
   </BrowserRouter>,

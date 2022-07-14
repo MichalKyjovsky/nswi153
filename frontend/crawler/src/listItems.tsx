@@ -7,11 +7,11 @@ import SitesIcon from '@mui/icons-material/Web';
 import ExecutionIcon from '@mui/icons-material/Settings';
 import MonitorIcon from '@mui/icons-material/MonitorHeartOutlined';
 import VisualisationIcon from '@mui/icons-material/AutoGraph';
-import {Link} from 'react-router-dom';
+import { Link } from 'react-router-dom';
 
 export const mainListItems = (
   <React.Fragment>
-    <ListItemButton component={Link} to={'\home'}>
+    <ListItemButton component={Link} to={'/home'}>
       <ListItemIcon>
         <DashboardIcon />
       </ListItemIcon>
@@ -23,12 +23,12 @@ export const mainListItems = (
       </ListItemIcon>
       <ListItemText primary="Sites" />
     </ListItemButton>
-    <ListItemButton>
+    <ListItemButton component={Link} to={'/executions'}>
       <ListItemIcon>
         <ExecutionIcon />
       </ListItemIcon>
       <ListItemText primary="Executions" />
-    </ListItemButton>    
+    </ListItemButton>
     <ListItemButton>
       <ListItemIcon>
         <VisualisationIcon />

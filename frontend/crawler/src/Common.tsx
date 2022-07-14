@@ -74,6 +74,36 @@ export function createWebsiteRecordForView(
     };
 }
 
+export interface ExecutionRecord {
+    pk: number,
+    websiteRecordLabel: string,
+    websiteRecordPk: number,
+    status: string,
+    lastExecutionTime: string,
+    lastExecutionDuration: number,
+    sitesCrawled: number
+}
+
+export function createExecutionRecord(
+    pk: number,
+    websiteRecordLabel: string,
+    websiteRecordPk: number,
+    status: string,
+    lastExecutionTime: string,
+    lastExecutionDuration: number,
+    sitesCrawled: number
+): ExecutionRecord {
+    return {
+        pk,
+        websiteRecordLabel,
+        websiteRecordPk,
+        status,
+        lastExecutionTime,
+        lastExecutionDuration,
+        sitesCrawled
+    };
+}
+
 const periodicityRegex = /^((\d+)d)?((\d+)h)?((\d+)m)?$/g;
 
 export function toPeriodicityString(period: number): string {

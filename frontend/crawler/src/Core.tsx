@@ -14,7 +14,6 @@ import MenuIcon from '@mui/icons-material/Menu';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import { mainListItems } from './listItems';
 import { Route, Routes, useNavigate } from "react-router-dom";
-import Dashboard from "./Dashboard";
 import Sites from "./Sites";
 import Executions from './Executions';
 
@@ -152,8 +151,7 @@ function CoreLayout() {
           <Toolbar />
           <Container maxWidth={false} sx={{ mt: 4, mb: 4 }}>
             <Routes>
-              <Route path="/" element={<Dashboard />} />
-              <Route path="/home" element={<Dashboard />} />
+              <Route path="/" element={<Sites />} />
               <Route path="/sites" element={<Sites />} />
               <Route path="/executions" element={<Executions />} />
             </Routes>

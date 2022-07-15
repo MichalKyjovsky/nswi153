@@ -15,6 +15,10 @@ import TableRow from '@mui/material/TableRow';
 import TablePaginationActions from './TablePaginationActions';
 import Toolbar from '@mui/material/Toolbar';
 import Typography from '@mui/material/Typography';
+import InputLabel from '@mui/material/InputLabel';
+import MenuItem from '@mui/material/MenuItem';
+import FormControl from '@mui/material/FormControl';
+import Select, { SelectChangeEvent } from '@mui/material/Select';
 import { ExecutionRecord, createExecutionRecord } from './Common';
 
 interface HeadCell {
@@ -96,6 +100,11 @@ interface ExecutionsResponse {
     totalRecords: number
 }
 
+interface WebsiteRecordForSelect {
+    pk: number,
+    label: string
+}
+
 class ExecutionManager {
     inst: AxiosInstance;
 
@@ -108,7 +117,7 @@ class ExecutionManager {
 
     async getPage(pageSize: number, pageNumber: number, websiteFilter?: number): Promise<ExecutionsResponse | null> {
         try {
-            const path = `executions${websiteFilter ? `/${websiteFilter}/` : "/"}${pageNumber + 1}/`;
+            const path = `execution${websiteFilter ? `/${websiteFilter}/` : "s/"}${pageNumber + 1}/`;
             const response = await this.inst.get(path, {
                 params: {
                     page_size: pageSize
@@ -129,10 +138,11 @@ class ExecutionManager {
 
 function ExecutionsContent() {
     const [page, setPage] = React.useState(0);
-    const [rowsPerPage, setRowsPerPage] = React.useState(5);
+    const [rowsPerPage, setRowsPerPage] = React.useState(10);
     const [rows, setRows] = React.useState<ExecutionRecord[]>([]);
     const [totalRecords, setTotalRecords] = React.useState(0);
     const [websiteRecordFilter, setWebsiteRecordFilter] = React.useState<number | undefined>(undefined);
+    const [websiteRecords, setWebsiteRecords] = React.useState<WebsiteRecordForSelect[]>([]);
 
     const manager = React.useMemo(() => new ExecutionManager(), []);
     const getRows = React.useCallback(async (pageSize: number, pageNumber: number, wrFilter?: number) => {
@@ -141,9 +151,15 @@ function ExecutionsContent() {
         response && setTotalRecords(response.totalRecords);
     }, [manager]);
 
+    const noFilter = -1;
+
     React.useEffect(() => {
         getRows(rowsPerPage, page, websiteRecordFilter);
     }, [page, rowsPerPage, websiteRecordFilter, getRows]);
+
+    React.useEffect(() => {
+        setWebsiteRecords([{ pk: 5, label: "First" }, { pk: 6, label: "Second record" }]);
+    }, []);
 
     // Avoid a layout jump when reaching the last page with empty rows.
     const emptyRows = totalRecords > rowsPerPage ? rowsPerPage - rows.length : 0;
@@ -155,6 +171,11 @@ function ExecutionsContent() {
     const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         setRowsPerPage(parseInt(event.target.value, 10));
         setPage(0);
+    };
+
+    const handleWebsiteRecordFilter = (event: SelectChangeEvent<number | undefined>) => {
+        const value = event.target.value;
+        setWebsiteRecordFilter(value === undefined || value === noFilter ? undefined : Number(value));
     };
 
     return (
@@ -184,6 +205,25 @@ function ExecutionsContent() {
                         >
                             Executions
                         </Typography>
+                        <FormControl variant="standard" sx={{ m: 1, minWidth: 250 }}>
+                            <InputLabel id="record-select-label">Website record filter</InputLabel>
+                            <Select
+                                labelId="record-select-label"
+                                id="record-select"
+                                value={websiteRecordFilter ?? noFilter}
+                                onChange={handleWebsiteRecordFilter}
+                                label="Website record filter"
+                            >
+                                <MenuItem value={-1}>
+                                    <em>None</em>
+                                </MenuItem>
+                                {
+                                    websiteRecords.map((rec: WebsiteRecordForSelect, index: number) =>
+                                        <MenuItem value={rec.pk} key={`select-item-${index}`}>{rec.label}</MenuItem>
+                                    )
+                                }
+                            </Select>
+                        </FormControl>
                     </Toolbar>
                     <TableContainer component={Paper} >
                         <Table sx={{ minWidth: 500 }} size={'small'}>

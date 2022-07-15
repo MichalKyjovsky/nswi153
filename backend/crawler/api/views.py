@@ -783,9 +783,9 @@ def add_execution_details(response_dict):
         pk = model['pk']
         executions = Execution.objects.filter(website_record=pk).order_by('-id')  # sort by ID DESC
         if len(executions) > 0:
-            model['last_duration'] = executions[0].crawl_duration
+            model['last_crawl'] = executions[0].last_crawl.strftime("%d.%m.%Y %H:%M:%S")
             model['last_status'] = status_mapper[executions[0].status]
         else:
-            model['last_duration'] = 'N/A'
+            model['last_crawl'] = 'N/A'
             model['last_status'] = status_mapper[4]
     return response_dict

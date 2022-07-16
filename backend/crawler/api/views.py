@@ -208,13 +208,13 @@ def record_crud(request):
                           type=openapi.TYPE_STRING,
                           example="my-tag"),
         openapi.Parameter('sort_property', openapi.IN_QUERY,
-                          "Property according to which results shall be returned. " +
-                          "One of 'label', 'url' or 'last_crawl'.",
+                          "Property according to which results shall be returned. "
+                          + "One of 'label', 'url' or 'last_crawl'.",
                           type=openapi.TYPE_STRING,
                           example="last_crawl"),
         openapi.Parameter('sort_order', openapi.IN_QUERY,
-                          "A required parameter when 'sort_property' parameter is used. " +
-                          "Ascending (ASC) or descending (DESC) sort order.",
+                          "A required parameter when 'sort_property' parameter is used. "
+                          + "Ascending (ASC) or descending (DESC) sort order.",
                           type=openapi.TYPE_STRING,
                           example="ASC")
     ],
@@ -483,8 +483,8 @@ def start_execution(request):
 
 @swagger_auto_schema(
     methods=['get'],
-    operation_description='Returns a list of `WebsiteRecord` objects from the database (non-paginated list) ' +
-                          'with 2 fields: pk and label.',
+    operation_description='Returns a list of `WebsiteRecord` objects from the database (non-paginated list) '
+                          + 'with 2 fields: pk and label.',
     responses={
         200: openapi.Response('WebsiteRecord info was returned.', examples={
             "application/json": {

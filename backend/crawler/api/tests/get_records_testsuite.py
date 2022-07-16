@@ -54,3 +54,35 @@ class GetRecordsTest(TestCase):
         assert 'error' not in response.data
         assert len(response.data) == 3
         assert len(response.data['records']) == 0
+
+    def test_get_records_sort_label(self):
+        response = self.client.get('/api/record/1/?sort_property=label&sort_order=desc')
+        assert 'error' not in response.data
+        assert len(response.data) == 3
+        assert len(response.data['records']) == 2
+        assert len(response.data['records'][0]) > 0
+        assert 'google' in response.data['records'][0]['fields']['url']
+
+    def test_get_records_sort_url(self):
+        response = self.client.get('/api/record/1/?sort_property=url&sort_order=desc')
+        assert 'error' not in response.data
+        assert len(response.data) == 3
+        assert len(response.data['records']) == 2
+        assert len(response.data['records'][0]) > 0
+        assert 'google' in response.data['records'][0]['fields']['url']
+
+    def test_get_records_sort_last_crawl(self):
+        response = self.client.get('/api/record/1/?sort_property=last_crawl&sort_order=desc')
+        assert 'error' not in response.data
+        assert len(response.data) == 3
+        assert len(response.data['records']) == 2
+        assert len(response.data['records'][0]) > 0
+        assert 'google' in response.data['records'][0]['fields']['url']
+
+    def test_get_records_sort_wrong_property(self):
+        response = self.client.get('/api/record/1/?sort_property=potato&sort_order=desc')
+        assert 'error' not in response.data
+        assert len(response.data) == 3
+        assert len(response.data['records']) == 2
+        assert len(response.data['records'][0]) > 0
+        assert 'amazon' in response.data['records'][0]['fields']['url']

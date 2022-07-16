@@ -206,7 +206,17 @@ def record_crud(request):
                           "Filters records to only those `WebsiteRecord`s that contain the specified tag. "
                           + OPTIONAL_CLAUSE,
                           type=openapi.TYPE_STRING,
-                          example="my-tag")
+                          example="my-tag"),
+        openapi.Parameter('sort_property', openapi.IN_QUERY,
+                          "Property according to which results shall be returned. " +
+                          "One of 'label', 'url' or 'last_crawl'.",
+                          type=openapi.TYPE_STRING,
+                          example="last_crawl"),
+        openapi.Parameter('sort_order', openapi.IN_QUERY,
+                          "A required parameter when 'sort_property' parameter is used. " +
+                          "Ascending (ASC) or descending (DESC) sort order.",
+                          type=openapi.TYPE_STRING,
+                          example="ASC")
     ],
     responses={
         200: openapi.Response('Records were returned.', examples={"application/json": {
@@ -271,6 +281,11 @@ def get_records(request, page):
         return response_dict
     response_dict = add_tags(response_dict, record_tags)
     response_dict = add_execution_details(response_dict)
+    sort_property, is_ascending = get_sort_details(request)
+    if sort_property is not None and sort_property != 'last_crawl':
+        response_dict['records'].sort(key=lambda a: a['fields'].__getitem__(sort_property), reverse=is_ascending)
+    elif sort_property == 'last_crawl':
+        response_dict['records'].sort(key=lambda a: a.__getitem__(sort_property), reverse=is_ascending)
     return Response(response_dict, status=status.HTTP_200_OK)
 
 
@@ -292,19 +307,6 @@ def get_records(request, page):
                 'executions': [
                     {
                         'model': 'api.execution',
-                        'pk': 15,
-                        'fields': {
-                            'title': 'Amazon purchases',
-                            'url': 'www.amazon.com',
-                            'crawl_duration': 600,
-                            'last_crawl': '2022-04-15T14:30:00Z',
-                            'website_record': 6,
-                            'status': 'IN QUEUE'
-                        },
-                        'links': 0
-                    },
-                    {
-                        'model': 'api.execution',
                         'pk': 11,
                         'fields': {
                             'title': 'Google browser',
@@ -312,7 +314,8 @@ def get_records(request, page):
                             'crawl_duration': 0,
                             'last_crawl': None,
                             'website_record': 5,
-                            'status': 'NEVER EXECUTED'
+                            'status': 'NEVER EXECUTED',
+                            'label': 'my_label'
                         },
                         'links': 0
                     },
@@ -325,13 +328,14 @@ def get_records(request, page):
                             'crawl_duration': 69,
                             'last_crawl': '2022-04-16T13:30:59Z',
                             'website_record': 5,
-                            'status': 'IN PROGRESS'
+                            'status': 'IN PROGRESS',
+                            'label': 'my_label'
                         },
                         'links': 0
                     }
                 ],
-                'total_pages': 1,
-                'total_records': 3
+                'total_pages': 3,
+                'total_records': 5
             }}),
         400: openapi.Response('Requested page of the list is invalid. ' + SEE_ERROR)
     },
@@ -349,6 +353,12 @@ def get_executions(request, page):
     response_data = serialize_data(executions, "executions", page_size, page_num)
     if type(response_data) == Response:
         return response_data
+
+    if 'executions' in response_data:
+        for execution in response_data['executions']:
+            record_label = WebsiteRecord.objects.filter(pk=execution['fields']['website_record'])[0].label
+            execution['fields']['label'] = record_label
+
     link_counts = dict()
     for execution in executions:
         execution_id = execution.pk
@@ -390,7 +400,8 @@ def get_executions(request, page):
                         'crawl_duration': 0,
                         'last_crawl': None,
                         'website_record': 5,
-                        'status': 'NEVER EXECUTED'
+                        'status': 'NEVER EXECUTED',
+                        'label': 'my_label'
                     }
                 },
                 {
@@ -402,7 +413,8 @@ def get_executions(request, page):
                         'crawl_duration': 69,
                         'last_crawl': '2022-04-16T13:30:59Z',
                         'website_record': 5,
-                        'status': 'IN PROGRESS'
+                        'status': 'IN PROGRESS',
+                        'label': 'my_label'
                     }
                 },
                 {
@@ -414,7 +426,8 @@ def get_executions(request, page):
                         'crawl_duration': 42,
                         'last_crawl': '2022-04-17T13:30:59Z',
                         'website_record': 5,
-                        'status': 'FINISHED'
+                        'status': 'FINISHED',
+                        'label': 'my_label'
                     }
                 }
             ],
@@ -438,14 +451,64 @@ def get_execution(request, record, page):
         return Response({"error": f"Invalid Website Record ID {id}: an integer expect!"},
                         status=status.HTTP_400_BAD_REQUEST)
     record_id = int(record)
-    executions = Execution.objects.filter(website_record=record_id)
+    executions = Execution.objects.filter(website_record=record_id).select_related()
     if len(executions) == 0:
         return Response({"error": f"Executions for Website Record ID {record} were not found!"},
                         status=status.HTTP_400_BAD_REQUEST)
     response_dict = serialize_data(map_execution_status(executions), "executions", page_size, page_num)
+    if 'executions' in response_dict and len(response_dict['executions']) > 0:
+        record_label = WebsiteRecord.objects.filter(pk=response_dict['executions'][0]['fields']['website_record'])[
+            0].label
+        for execution in response_dict['executions']:
+            execution['fields']['label'] = record_label
     if type(response_dict) == Response:
         return response_dict
     return Response(response_dict, status=status.HTTP_200_OK)
+
+
+@swagger_auto_schema(
+    methods=['POST'],
+    operation_description='Starts and crawler execution of a specified `WebsiteRecord`.',
+    responses={
+        200: openapi.Response('Crawling has started or it was placed in a queue. No body.'),
+        400: openapi.Response('The `WebsiteRecord` ID was not present or is invalid.')
+    },
+    tags=['Website Record'])
+@api_view(['POST'])
+def start_execution(request):
+    # TODO: MichalKyjovsky -> get parameter from request body and call celery/something to start?
+    #  Or is it the same as celery endpoint?
+    pass
+
+
+@swagger_auto_schema(
+    methods=['get'],
+    operation_description='Returns a list of `WebsiteRecord` objects from the database (non-paginated list) ' +
+                          'with 2 fields: pk and label.',
+    responses={
+        200: openapi.Response('WebsiteRecord info was returned.', examples={
+            "application/json": {
+                'records': [
+                    {
+                        'pk': 6,
+                        'label': 'amazon_crawl'
+                    },
+                    {
+                        'pk': 5,
+                        'label': 'my_label'
+                    }
+                ]
+            }
+        })
+    },
+    tags=['Website Record'])
+@api_view(['GET'])
+def list_records(request):
+    record_data = WebsiteRecord.objects.all().only('pk', 'label')
+    record_data_list = ",".join(
+        ['{"pk": ' + str(record.pk) + ', "label": "' + record.label + '"}' for record in record_data])
+    json_data = json.loads('{"records": [' + record_data_list + ']}')
+    return Response(data=json_data, status=status.HTTP_200_OK)
 
 
 @swagger_auto_schema(
@@ -783,9 +846,20 @@ def add_execution_details(response_dict):
         pk = model['pk']
         executions = Execution.objects.filter(website_record=pk).order_by('-id')  # sort by ID DESC
         if len(executions) > 0:
-            model['last_crawl'] = executions[0].last_crawl.strftime("%d.%m.%Y %H:%M:%S")
+            model['last_crawl'] = executions[0].last_crawl.strftime("%Y-%m-%d %H:%M:%S")
             model['last_status'] = status_mapper[executions[0].status]
         else:
             model['last_crawl'] = 'N/A'
             model['last_status'] = status_mapper[4]
     return response_dict
+
+
+def get_sort_details(request):
+    if 'sort_property' in request.query_params:
+        sort_property = request.query_params.get('sort_property')
+    else:
+        sort_property = None
+    if sort_property is None or sort_property not in (
+            'label', 'last_crawl', 'url') or 'sort_order' not in request.query_params:
+        return None, False
+    return sort_property, False if request.query_params.get('sort_order') == 'ASC' else True

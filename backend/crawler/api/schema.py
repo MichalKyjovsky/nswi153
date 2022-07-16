@@ -30,7 +30,7 @@ class TagType(DjangoObjectType):
 class WebsiteRecordType(DjangoObjectType):
     class Meta:
         model = WebsiteRecord
-        fields = ('id', 'label', 'url', 'interval', 'status', 'regex', 'tag', 'active')
+        fields = ('id', 'label', 'url', 'interval', 'active', 'regex')
 
     tags = graphene.List(TagType)
 
@@ -42,7 +42,7 @@ class WebsiteRecordType(DjangoObjectType):
 class ExecutionType(DjangoObjectType):
     class Meta:
         model = Execution
-        fields = ('title', 'url', 'crawl_time', 'website_record')
+        fields = ('title', 'url', 'crawl_duration', 'last_crawl', 'website_record', 'status')
 
 
 class ExecutionLinkType(DjangoObjectType):

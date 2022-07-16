@@ -7,7 +7,6 @@ import Button from '@mui/material/Button';
 import Stack from '@mui/material/Stack';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import Checkbox from '@mui/material/Checkbox';
-import IconButton from '@mui/material/IconButton';
 import SaveIcon from '@mui/icons-material/Save';
 import AddIcon from '@mui/icons-material/Add';
 import NoItemIcon from '@mui/icons-material/Block';
@@ -185,13 +184,14 @@ export default function NewSiteModal(props: EditSiteModalProps) {
                 } label="Active" />
 
                 <Typography sx={{ mb: 1, mt: 1 }}>Tags</Typography>
-                <Stack direction="row" spacing={1}>
+                <Stack direction="row" sx={{ flexWrap: "wrap" }}>
                     {tags.length > 0 ? tags.map((value, index) => (
                         <Chip
                             label={value}
                             variant="outlined"
                             onDelete={() => handleDeleteTag(index)}
                             key={index}
+                            sx={{ margin: "2px" }}
                         />
                     )) :
                         <Chip icon={<NoItemIcon />} label="No tags were added" key={0} />

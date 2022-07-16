@@ -1,6 +1,4 @@
 import * as React from 'react';
-import axios from 'axios';
-import { AxiosInstance } from 'axios';
 import Box from '@mui/material/Box';
 import Container from '@mui/material/Container';
 import Paper from '@mui/material/Paper';
@@ -19,7 +17,8 @@ import InputLabel from '@mui/material/InputLabel';
 import MenuItem from '@mui/material/MenuItem';
 import FormControl from '@mui/material/FormControl';
 import Select, { SelectChangeEvent } from '@mui/material/Select';
-import { ExecutionRecord, createExecutionRecord } from './Common';
+import { ExecutionRecord } from './Common';
+import ExecutionManager, { WebsiteRecordForSelect } from './ExecutionManager';
 
 interface HeadCell {
     id: keyof ExecutionRecord;
@@ -56,86 +55,6 @@ const headCells: readonly HeadCell[] = [
     },
 ];
 
-function ExecutionsTableHead() {
-    return (
-        <TableHead>
-            <TableRow>
-                {headCells.map((headCell) => (
-                    <TableCell
-                        key={headCell.id}
-                        align={headCell.align}
-                        width={headCell.width}
-                    >
-                        {headCell.label}
-                    </TableCell>
-                ))}
-            </TableRow>
-        </TableHead >
-    );
-}
-
-interface ResponseExecutionPage {
-    model: string,
-    pk: number,
-    fields: {
-        title: string,
-        url: string,
-        crawl_duration: number,
-        last_crawl: string,
-        website_record: number,
-        status: string
-    },
-    links: number
-}
-
-interface ResponseData {
-    executions: ResponseExecutionPage[],
-    total_pages: number,
-    total_records: number
-}
-
-interface ExecutionsResponse {
-    executions: ExecutionRecord[],
-    totalPages: number,
-    totalRecords: number
-}
-
-interface WebsiteRecordForSelect {
-    pk: number,
-    label: string
-}
-
-class ExecutionManager {
-    inst: AxiosInstance;
-
-    constructor() {
-        this.inst = axios.create({
-            baseURL: 'http://localhost:8000/api/',
-            timeout: 1000,
-        });
-    }
-
-    async getPage(pageSize: number, pageNumber: number, websiteFilter?: number): Promise<ExecutionsResponse | null> {
-        try {
-            const path = `execution${websiteFilter ? `/${websiteFilter}/` : "s/"}${pageNumber + 1}/`;
-            const response = await this.inst.get(path, {
-                params: {
-                    page_size: pageSize
-                }
-            });
-            const data: ResponseData = response.data;
-            return {
-                executions: data.executions.map(rec => createExecutionRecord(rec.pk, rec.fields.title, rec.fields.website_record, rec.fields.status, rec.fields.last_crawl, rec.fields.crawl_duration, rec.links)),
-                totalPages: data.total_pages,
-                totalRecords: data.total_records
-            };
-        } catch (error) {
-            console.error(error);
-        }
-        return null;
-    }
-}
-
 function ExecutionsContent() {
     const [page, setPage] = React.useState(0);
     const [rowsPerPage, setRowsPerPage] = React.useState(10);
@@ -145,10 +64,16 @@ function ExecutionsContent() {
     const [websiteRecords, setWebsiteRecords] = React.useState<WebsiteRecordForSelect[]>([]);
 
     const manager = React.useMemo(() => new ExecutionManager(), []);
+
     const getRows = React.useCallback(async (pageSize: number, pageNumber: number, wrFilter?: number) => {
         const response = await manager.getPage(pageSize, pageNumber, wrFilter);
         setRows(response ? response.executions : []);
         response && setTotalRecords(response.totalRecords);
+    }, [manager]);
+
+    const getRecords = React.useCallback(async () => {
+        const response = await manager.listRecords();
+        setWebsiteRecords(response ?? []);
     }, [manager]);
 
     const noFilter = -1;
@@ -158,8 +83,8 @@ function ExecutionsContent() {
     }, [page, rowsPerPage, websiteRecordFilter, getRows]);
 
     React.useEffect(() => {
-        setWebsiteRecords([{ pk: 5, label: "First" }, { pk: 6, label: "Second record" }]);
-    }, []);
+        getRecords();
+    }, [getRecords]);
 
     // Avoid a layout jump when reaching the last page with empty rows.
     const emptyRows = totalRecords > rowsPerPage ? rowsPerPage - rows.length : 0;
@@ -176,6 +101,7 @@ function ExecutionsContent() {
     const handleWebsiteRecordFilter = (event: SelectChangeEvent<number | undefined>) => {
         const value = event.target.value;
         setWebsiteRecordFilter(value === undefined || value === noFilter ? undefined : Number(value));
+        setPage(0);
     };
 
     return (
@@ -227,7 +153,19 @@ function ExecutionsContent() {
                     </Toolbar>
                     <TableContainer component={Paper} >
                         <Table sx={{ minWidth: 500 }} size={'small'}>
-                            <ExecutionsTableHead />
+                            <TableHead>
+                                <TableRow>
+                                    {headCells.map((headCell) => (
+                                        <TableCell
+                                            key={headCell.id}
+                                            align={headCell.align}
+                                            width={headCell.width}
+                                        >
+                                            {headCell.label}
+                                        </TableCell>
+                                    ))}
+                                </TableRow>
+                            </TableHead >
                             <TableBody>
                                 {rows.map((row: ExecutionRecord, index: number) => {
                                     return (

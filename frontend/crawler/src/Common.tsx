@@ -1,3 +1,7 @@
+export const API_BASE_URL = 'http://localhost:8000/api/';
+
+export type Order = 'asc' | 'desc';
+
 export interface WebsiteRecord {
     pk?: number,
     url: string,
@@ -46,7 +50,7 @@ export interface WebsiteRecordForView {
     periodicity: string,
     active: boolean,
     tags: string[],
-    lastExecutionTime: string,
+    last_crawl: string,
     lastExecutionStatus: string,
     actions: boolean
 }
@@ -68,7 +72,7 @@ export function createWebsiteRecordForView(
         periodicity,
         active,
         tags,
-        lastExecutionTime,
+        last_crawl: lastExecutionTime,
         lastExecutionStatus,
         actions: true
     };

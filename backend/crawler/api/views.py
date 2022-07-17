@@ -1,3 +1,4 @@
+from django.db.models import Q
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
@@ -42,7 +43,21 @@ def get_graph(request, record):
     @param record: ID of the record whose graph we want to receive
     @return: the request response
     """
-    return Response({"message": "Hello World!"}, status=status.HTTP_200_OK)
+    if not record.isnumeric():
+        return Response({"error": f"The Website Record ID {record} is not an integer!"},
+                        status=status.HTTP_400_BAD_REQUEST)
+    if not WebsiteRecord.objects.filter(pk=int(record)).exists():
+        return Response({"error": f"The Website Record ID {record} was not found!"},
+                        status=status.HTTP_404_NOT_FOUND)
+    record_id = int(record)
+    edges = Edge.objects.select_related().filter(Q(source__owner=record_id) | Q(target__owner=record_id))
+    nodes = Node.objects.filter(owner=int(record))
+    json_serializer = serializers.get_serializer("json")
+    serializer = json_serializer()
+    serialized_edges = json.loads(serializer.serialize(edges))
+    serialized_nodes = json.loads(serializer.serialize(nodes))
+    output = {"nodes": serialized_nodes, "edges": serialized_edges}
+    return Response(data=output, status=status.HTTP_200_OK)
 
 
 @swagger_auto_schema(

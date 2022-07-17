@@ -76,6 +76,16 @@
     }
   },
   {
+    "model": "api.node",
+    "pk": 6,
+    "fields": {
+      "title": "Node A",
+      "url": "www.com.foo.baz",
+      "crawl_time": "",
+      "owner": 6
+    }
+  },
+  {
     "model": "api.edge",
     "pk": 1,
     "fields": {

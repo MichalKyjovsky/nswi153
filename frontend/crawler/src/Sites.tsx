@@ -24,7 +24,7 @@ import DialogTitle from '@mui/material/DialogTitle';
 import SitesToolbar from './SitesToolbar';
 import NewSiteModal from './EditSiteModal';
 import { WebsiteRecord, emptyWebsiteRecord, WebsiteRecordForView, Order } from './Common';
-import WebsiteRecordManager from './WebsiteRecordManager';
+import ApiManager from './ApiManager';
 import SitesTableHead from './SitesTableHead';
 
 function SitesContent() {
@@ -43,9 +43,9 @@ function SitesContent() {
     const [order, setOrder] = React.useState<Order>('asc');
     const [orderBy, setOrderBy] = React.useState<keyof WebsiteRecordForView>('label');
 
-    const manager = React.useMemo(() => new WebsiteRecordManager(), []);
+    const manager = React.useMemo(() => new ApiManager(), []);
     const getRows = React.useCallback(async (pageSize: number, pageNumber: number, lblFilter: string, tags: string, url: string, sortOrder: Order, sortProperty: keyof WebsiteRecordForView) => {
-        const response = await manager.getPage(pageSize, pageNumber, lblFilter, tags, url, sortOrder, sortProperty);
+        const response = await manager.getRecordPage(pageSize, pageNumber, lblFilter, tags, url, sortOrder, sortProperty);
         setRows(response ? response.records : []);
         response && setTotalRecords(response.totalRecords);
     }, [manager]);

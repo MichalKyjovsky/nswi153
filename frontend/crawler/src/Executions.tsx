@@ -18,7 +18,7 @@ import MenuItem from '@mui/material/MenuItem';
 import FormControl from '@mui/material/FormControl';
 import Select, { SelectChangeEvent } from '@mui/material/Select';
 import { ExecutionRecord } from './Common';
-import ExecutionManager, { WebsiteRecordForSelect } from './ExecutionManager';
+import ApiManager, { WebsiteRecordForSelect } from './ApiManager';
 
 interface HeadCell {
     id: keyof ExecutionRecord;
@@ -63,10 +63,10 @@ function ExecutionsContent() {
     const [websiteRecordFilter, setWebsiteRecordFilter] = React.useState<number | undefined>(undefined);
     const [websiteRecords, setWebsiteRecords] = React.useState<WebsiteRecordForSelect[]>([]);
 
-    const manager = React.useMemo(() => new ExecutionManager(), []);
+    const manager = React.useMemo(() => new ApiManager(), []);
 
     const getRows = React.useCallback(async (pageSize: number, pageNumber: number, wrFilter?: number) => {
-        const response = await manager.getPage(pageSize, pageNumber, wrFilter);
+        const response = await manager.getExecutionPage(pageSize, pageNumber, wrFilter);
         setRows(response ? response.executions : []);
         response && setTotalRecords(response.totalRecords);
     }, [manager]);

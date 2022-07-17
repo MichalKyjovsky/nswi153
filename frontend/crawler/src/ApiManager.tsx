@@ -6,9 +6,47 @@ import {
     toPeriodicityString,
     WebsiteRecord,
     createWebsiteRecord,
+    ExecutionRecord,
+    createExecutionRecord,
     API_BASE_URL,
     Order
 } from './Common';
+
+interface ResponseExecutionPage {
+    model: string,
+    pk: number,
+    fields: {
+        title: string,
+        url: string,
+        crawl_duration: number,
+        last_crawl: string,
+        website_record: number,
+        status: string,
+        label: string
+    },
+    links: number
+}
+
+interface ResponseData {
+    executions: ResponseExecutionPage[],
+    total_pages: number,
+    total_records: number
+}
+
+interface ExecutionsResponse {
+    executions: ExecutionRecord[],
+    totalPages: number,
+    totalRecords: number
+}
+
+interface RecordsListResponse {
+    records: WebsiteRecordForSelect[]
+}
+
+export interface WebsiteRecordForSelect {
+    pk: number,
+    label: string
+}
 
 interface ResponseRecordPage {
     model: string,
@@ -50,7 +88,7 @@ interface WebsiteResponse {
     totalRecords: number
 }
 
-export default class WebsiteRecordManager {
+export default class ApiManager {
     inst: AxiosInstance;
 
     constructor() {
@@ -60,7 +98,39 @@ export default class WebsiteRecordManager {
         });
     }
 
-    async getPage(pageSize: number, pageNumber: number, labelFilter: string, tagsFilter: string, urlFilter: string, order: Order, orderBy: keyof WebsiteRecordForView): Promise<WebsiteResponse | null> {
+    async getExecutionPage(pageSize: number, pageNumber: number, websiteFilter?: number): Promise<ExecutionsResponse | null> {
+        try {
+            const path = `execution${websiteFilter ? `/${websiteFilter}/` : "s/"}${pageNumber + 1}/`;
+            const response = await this.inst.get(path, {
+                params: {
+                    page_size: pageSize
+                }
+            });
+            const data: ResponseData = response.data;
+            return {
+                executions: data.executions.map(rec => createExecutionRecord(rec.pk, rec.fields.label, rec.fields.website_record, rec.fields.status, rec.fields.last_crawl, rec.fields.crawl_duration, rec.links)),
+                totalPages: data.total_pages,
+                totalRecords: data.total_records
+            };
+        } catch (error) {
+            console.error(error);
+        }
+        return null;
+    }
+
+    async listRecords(): Promise<WebsiteRecordForSelect[] | null> {
+        try {
+            const path = 'record/list/';
+            const response = await this.inst.get(path);
+            const data: RecordsListResponse = response.data;
+            return data.records;
+        } catch (error) {
+            console.error(error);
+        }
+        return null;
+    }
+
+    async getRecordPage(pageSize: number, pageNumber: number, labelFilter: string, tagsFilter: string, urlFilter: string, order: Order, orderBy: keyof WebsiteRecordForView): Promise<WebsiteResponse | null> {
         try {
             const response = await this.inst.get(`record/${pageNumber + 1}/`, {
                 params: {

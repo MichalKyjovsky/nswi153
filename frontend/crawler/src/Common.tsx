@@ -108,6 +108,70 @@ export function createExecutionRecord(
     };
 }
 
+export interface LayoutNode {
+    id: string;
+    layoutPosX: number;
+    layoutPosY: number;
+    layoutForceX: number;
+    layoutForceY: number;
+    data: {
+        title: string,
+        crawlTime: string,
+        url: string,
+        owner: number
+    }
+}
+
+export function createLayoutNode(id: string, title: string, crawlTime: string, url: string, owner: number): LayoutNode {
+    return {
+        id,
+        layoutPosX: 0,
+        layoutPosY: 0,
+        layoutForceX: 0,
+        layoutForceY: 0,
+        data: {
+            title,
+            crawlTime,
+            url,
+            owner
+        }
+    };
+}
+
+export interface LayoutEdge {
+    source: LayoutNode,
+    target: LayoutNode,
+    weight: number
+}
+
+export function createLayoutEdge(source: LayoutNode, target: LayoutNode): LayoutEdge {
+    return {
+        source,
+        target,
+        weight: 1
+    };
+}
+
+export interface LayoutGraph {
+    nodes: LayoutNode[];
+    edges: LayoutEdge[];
+    layoutMinX: number;
+    layoutMaxX: number;
+    layoutMinY: number;
+    layoutMaxY: number;
+}
+
+export function createLayoutGraph(nodes: LayoutNode[], edges: LayoutEdge[]): LayoutGraph {
+    return {
+        nodes,
+        edges,
+        layoutMinX: 0,
+        layoutMaxX: 0,
+        layoutMinY: 0,
+        layoutMaxY: 0
+    };
+}
+
 const periodicityRegex = /^((\d+)d)?((\d+)h)?((\d+)m)?$/g;
 
 export function toPeriodicityString(period: number): string {

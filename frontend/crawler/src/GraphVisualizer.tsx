@@ -1,34 +1,19 @@
-interface Node {
-    layoutPosX: number;
-    layoutPosY: number;
-    layoutForceX: number;
-    layoutForceY: number;
-}
+import {
+    Node,
+    Edge,
+    MarkerType
+} from 'react-flow-renderer';
+import { LayoutGraph, LayoutEdge, LayoutNode } from './Common';
 
-interface Edge {
-    source: Node,
-    target: Node,
-    weight: number
-}
-
-interface Graph {
-    nodes: Node[],
-    edges: Edge[],
-    layoutMinX: number;
-    layoutMaxX: number;
-    layoutMinY: number;
-    layoutMaxY: number;
-}
-
-export class GraphLayout {
-    graph: Graph;
+export default class GraphLayoutRenderer {
+    graph: LayoutGraph;
     iterations = 500;
     maxRepulsiveForceDistance = 6;
     k = 2;
     c = 0.01;
     maxVertexMovement = 0.5;
 
-    constructor(graph: Graph) {
+    constructor(graph: LayoutGraph) {
         this.graph = graph;
     }
 
@@ -71,7 +56,7 @@ export class GraphLayout {
 
     layoutIteration() {
         // Forces on nodes due to node-node repulsions
-        for (var i = 0; i < this.graph.nodes.length; i++) {
+        for (let i = 0; i < this.graph.nodes.length; i++) {
             var node1 = this.graph.nodes[i];
             for (var j = i + 1; j < this.graph.nodes.length; j++) {
                 var node2 = this.graph.nodes[j];
@@ -79,13 +64,13 @@ export class GraphLayout {
             }
         }
         // Forces on nodes due to edge attractions
-        for (var i = 0; i < this.graph.edges.length; i++) {
+        for (let i = 0; i < this.graph.edges.length; i++) {
             var edge = this.graph.edges[i];
             this.layoutAttractive(edge);
         }
 
         // Move by the given force
-        for (var i = 0; i < this.graph.nodes.length; i++) {
+        for (let i = 0; i < this.graph.nodes.length; i++) {
             var node = this.graph.nodes[i];
             var xmove = this.c * node.layoutForceX;
             var ymove = this.c * node.layoutForceY;
@@ -103,14 +88,14 @@ export class GraphLayout {
         }
     }
 
-    layoutRepulsive(node1: Node, node2: Node) {
+    layoutRepulsive(node1: LayoutNode, node2: LayoutNode) {
         var dx = node2.layoutPosX - node1.layoutPosX;
         var dy = node2.layoutPosY - node1.layoutPosY;
         var d2 = dx * dx + dy * dy;
         if (d2 < 0.01) {
             dx = 0.1 * Math.random() + 0.1;
             dy = 0.1 * Math.random() + 0.1;
-            var d2 = dx * dx + dy * dy;
+            d2 = dx * dx + dy * dy;
         }
         var d = Math.sqrt(d2);
         if (d < this.maxRepulsiveForceDistance) {
@@ -122,7 +107,7 @@ export class GraphLayout {
         }
     }
 
-    layoutAttractive(edge: Edge) {
+    layoutAttractive(edge: LayoutEdge) {
         var node1 = edge.source;
         var node2 = edge.target;
 
@@ -132,7 +117,7 @@ export class GraphLayout {
         if (d2 < 0.01) {
             dx = 0.1 * Math.random() + 0.1;
             dy = 0.1 * Math.random() + 0.1;
-            var d2 = dx * dx + dy * dy;
+            d2 = dx * dx + dy * dy;
         }
         var d = Math.sqrt(d2);
         if (d > this.maxRepulsiveForceDistance) {
@@ -140,12 +125,30 @@ export class GraphLayout {
             d2 = d * d;
         }
         var attractiveForce = (d2 - this.k * this.k) / this.k;
-        if (edge.weight == undefined || edge.weight < 1) edge.weight = 1;
+        if (edge.weight === undefined || edge.weight < 1) edge.weight = 1;
         attractiveForce *= Math.log(edge.weight) * 0.5 + 1;
 
         node2.layoutForceX -= attractiveForce * dx / d;
         node2.layoutForceY -= attractiveForce * dy / d;
         node1.layoutForceX += attractiveForce * dx / d;
         node1.layoutForceY += attractiveForce * dy / d;
+    }
+
+    translate(node: LayoutNode, factorX: number, factorY: number): { x: number, y: number } {
+        return {
+            x: (node.layoutPosX - this.graph.layoutMinX) * factorX,
+            y: (node.layoutPosY - this.graph.layoutMinY) * factorY
+        };
+    }
+
+    getGraph(viewWidth: number, viewHeight: number): { nodes: Node[], edges: Edge[] } {
+        const factorX = (viewWidth) / (this.graph.layoutMaxX - this.graph.layoutMinX);
+        const factorY = (viewHeight) / (this.graph.layoutMaxY - this.graph.layoutMinY);
+
+        const nodes = this.graph.nodes.map(node => ({ id: node.id, data: { label: node.data.url }, position: this.translate(node, factorX, factorY) }))
+
+        const edges: Edge[] = this.graph.edges.map(edge => ({ id: `e${edge.source.id}-${edge.target.id}`, source: edge.source.id, target: edge.target.id, markerEnd: { type: MarkerType.ArrowClosed, color: 'black' } }))
+
+        return { nodes, edges };
     }
 }

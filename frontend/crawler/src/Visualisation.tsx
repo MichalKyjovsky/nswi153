@@ -19,6 +19,8 @@ import MenuItem from '@mui/material/MenuItem';
 import FormControl from '@mui/material/FormControl';
 import Select, { SelectChangeEvent } from '@mui/material/Select';
 import ApiManager, { WebsiteRecordForSelect } from './ApiManager';
+import GraphVisualizer from './GraphVisualizer';
+import { LayoutGraph } from './Common';
 
 const initialNodes: Node[] = [
     { id: '1', data: { label: 'Node 1' }, position: { x: 5, y: 5 } },
@@ -55,8 +57,13 @@ function VisualisationContent() {
         setWebsiteRecordFilter(value === undefined || value === noFilter ? undefined : Number(value));
     };
 
-    const [nodes, setNodes] = React.useState<Node[]>(initialNodes);
-    const [edges, setEdges] = React.useState<Edge[]>(initialEdges);
+    const visualizer = new GraphVisualizer(manager.getGraph());
+    visualizer.layout();
+    console.log(visualizer.graph);
+    const visualizedGraph = visualizer.getGraph(800, 600);
+
+    const [nodes, setNodes] = React.useState<Node[]>(visualizedGraph.nodes);
+    const [edges, setEdges] = React.useState<Edge[]>(visualizedGraph.edges);
 
     const onNodesChange = React.useCallback(
         (changes: NodeChange[]) => setNodes((nds) => applyNodeChanges(changes, nds)),

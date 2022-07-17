@@ -9,7 +9,12 @@ import {
     ExecutionRecord,
     createExecutionRecord,
     API_BASE_URL,
-    Order
+    Order,
+    createLayoutEdge,
+    createLayoutGraph,
+    createLayoutNode,
+    LayoutGraph,
+    LayoutNode
 } from './Common';
 
 interface ResponseExecutionPage {
@@ -86,6 +91,102 @@ interface WebsiteResponse {
     records: WebsiteRecordForView[],
     totalPages: number,
     totalRecords: number
+}
+
+interface GraphResponseNode {
+    model: string,
+    pk: number,
+    fields: {
+        title: string,
+        crawl_time: string,
+        url: string,
+        owner: number
+    }
+}
+
+interface GraphResponseEdge {
+    model: string,
+    pk: number,
+    fields: {
+        source: number,
+        target: number
+    }
+}
+
+interface GraphResponse {
+    nodes: GraphResponseNode[],
+    edges: GraphResponseEdge[]
+}
+
+const getGraphExampleResponse: GraphResponse = {
+    'nodes': [
+        {
+            'model': 'api.node',
+            'pk': 1,
+            'fields': {
+                'title': 'Node A',
+                'crawl_time': '',
+                'url': 'www.com.foo.baz',
+                'owner': 5
+            }
+        },
+        {
+            'model': 'api.node',
+            'pk': 2,
+            'fields': {
+                'title': 'Node B',
+                'crawl_time': '',
+                'url': 'www.com.foo.baz.sas',
+                'owner': 5
+            }
+        },
+        {
+            'model': 'api.node',
+            'pk': 3,
+            'fields': {
+                'title': 'Node C',
+                'crawl_time': '',
+                'url': 'www.com.sas',
+                'owner': 5
+            }
+        },
+        {
+            'model': 'api.node',
+            'pk': 4,
+            'fields': {
+                'title': 'Node D',
+                'crawl_time': '',
+                'url': 'www.sas.baz',
+                'owner': 5
+            }
+        }
+    ],
+    'edges': [
+        {
+            'model': 'api.edge',
+            'pk': 1,
+            'fields': {
+                'source': 1,
+                'target': 2
+            }
+        },
+        {
+            'model': 'api.edge',
+            'pk': 2,
+            'fields': {
+                'source': 1,
+                'target': 4
+            }
+        },
+        {
+            'model': 'api.edge',
+            'pk': 3,
+            'fields': {
+                'source': 4,
+                'target': 2
+            }
+        }
+    ]
 }
 
 export default class ApiManager {
@@ -176,5 +277,18 @@ export default class ApiManager {
                 record_id: id
             }
         });
+    }
+
+    getGraph(): LayoutGraph {
+        const nodes = getGraphExampleResponse.nodes
+            .map(node => createLayoutNode(node.pk.toString(), node.fields.title, node.fields.crawl_time, node.fields.url, node.fields.owner));
+
+        const nodesMap: Record<string, LayoutNode> = {};
+        nodes.forEach(node => nodesMap[node.id] = node);
+
+        const edges = getGraphExampleResponse.edges
+            .map(edge => createLayoutEdge(nodesMap[edge.fields.source.toString()], nodesMap[edge.fields.target.toString()]));
+
+        return createLayoutGraph(nodes, edges);
     }
 }

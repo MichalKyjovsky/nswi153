@@ -26,6 +26,5 @@ urlpatterns = [
     path('execution/<record>/', views.start_execution, name='start_execution'),
     path('activate/<record>/', views.activate, name='activate_record'),
     path('deactivate/<record>/', views.deactivate, name='deactivate_record'),
-    path('celery/', views.run_celery, name='run_celery'),
     path('docs/', schema_view.with_ui('swagger', cache_timeout=0), name='api_docs')
 ]

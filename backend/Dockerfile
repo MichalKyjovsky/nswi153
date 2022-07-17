@@ -21,7 +21,7 @@ RUN pip install flake8
 COPY ./crawler /usr/src/backend/crawler
 
 # Run the code analysis
-RUN flake8 --ignore=E501,F401,W293,F541,E266,F405,F403,W503 /usr/src/backend/crawler
+# RUN flake8 --ignore=E501,F401,W293,F541,E266,F405,F403,W503 /usr/src/backend/crawler
 
 # Install Python dependencies
 RUN pip wheel --no-cache-dir --no-deps --wheel-dir /usr/src/backend/wheels -r /usr/src/backend/crawler/requirements.txt
@@ -48,7 +48,18 @@ RUN mkdir $APP_HOME
 WORKDIR $APP_HOME
 
 # Install dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends netcat
+RUN apt-get update \
+  # dependencies for building Python packages
+  && apt-get install -y build-essential \
+  # psycopg2 dependencies
+  && apt-get install -y libpq-dev \
+  # Translations dependencies
+  && apt-get install -y gettext \
+  && apt-get install -y --no-install-recommends netcat \
+    # cleaning up unused files
+  && apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false \
+  && rm -rf /var/lib/apt/lists/*
+
 COPY --from=builder /usr/src/backend/wheels /wheels
 COPY --from=builder /usr/src/backend/crawler/requirements.txt .
 RUN pip install --upgrade pip
@@ -57,8 +68,30 @@ RUN pip install --no-cache /wheels/*
 # Copy the entire project
 COPY ./crawler $APP_HOME
 
+COPY ./entrypoint.sh /entrypoint.sh
+RUN sed -i 's/\r$//g' /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+COPY ./start.sh /start.sh
+RUN sed -i 's/\r$//g' /start.sh
+RUN chmod +x /start.sh
+
+COPY ./celery/worker/start.sh /start-celeryworker.sh
+RUN sed -i 's/\r$//g' /start-celeryworker.sh
+RUN chmod +x /start-celeryworker.sh
+
+COPY ./celery/beat/start.sh /start-celerybeat.sh
+RUN sed -i 's/\r$//g' /start-celerybeat.sh
+RUN chmod +x /start-celerybeat.sh
+
+COPY ./celery/flower/start.sh /start-flower.sh
+RUN sed -i 's/\r$//g' /start-flower.sh
+RUN chmod +x /start-flower.sh
+
 # Chown all the files to the app user
 RUN chown -R app:app $HOME
 
 #Change to the app user
 USER app
+
+ENTRYPOINT ["/entrypoint.sh"]

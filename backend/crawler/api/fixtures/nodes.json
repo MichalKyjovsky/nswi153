@@ -1,5 +1,31 @@
 [
   {
+    "model": "api.websiterecord",
+    "pk": 5,
+    "fields": {
+      "url": "http://www.google.com",
+      "label": "my_label",
+      "interval": 120,
+      "active": "True",
+      "regex": ".*",
+      "tags": [
+      ]
+    }
+  },
+  {
+    "model": "api.websiterecord",
+    "pk": 6,
+    "fields": {
+      "url": "http://www.amazon.com",
+      "label": "amazon_crawl",
+      "interval": 100,
+      "active": "False",
+      "regex": "www.amazon.com.*",
+      "tags": [
+      ]
+    }
+  },
+  {
     "model": "api.node",
     "pk": 1,
     "fields": {
@@ -16,6 +42,46 @@
       "title": "Node B",
       "url": "www.com.foo.baz.sas",
       "crawl_time": "",
+      "owner": 5
+    }
+  },
+  {
+    "model": "api.node",
+    "pk": 3,
+    "fields": {
+      "title": "Node C",
+      "url": "www.com.sas",
+      "crawl_time": "",
+      "owner": 5
+    }
+  },
+  {
+    "model": "api.node",
+    "pk": 4,
+    "fields": {
+      "title": "Node D",
+      "url": "www.sas.baz",
+      "crawl_time": "",
+      "owner": 5
+    }
+  },
+  {
+    "model": "api.node",
+    "pk": 5,
+    "fields": {
+      "title": "Node E",
+      "url": "www.sas.com",
+      "crawl_time": "",
+      "owner": 6
+    }
+  },
+  {
+    "model": "api.node",
+    "pk": 6,
+    "fields": {
+      "title": "Node A",
+      "url": "www.com.foo.baz",
+      "crawl_time": "",
       "owner": 6
     }
   },
@@ -24,6 +90,22 @@
     "pk": 1,
     "fields": {
       "source": 1,
+      "target": 2
+    }
+  },
+  {
+    "model": "api.edge",
+    "pk": 2,
+    "fields": {
+      "source": 1,
+      "target": 4
+    }
+  },
+  {
+    "model": "api.edge",
+    "pk": 3,
+    "fields": {
+      "source": 4,
       "target": 2
     }
   }

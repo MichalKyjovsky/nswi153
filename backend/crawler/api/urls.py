@@ -17,7 +17,7 @@ schema_view = get_schema_view(
 )
 
 urlpatterns = [
-    path('graph/<record>/', views.get_graph, name='get_graph'),
+    path('graph/', views.get_graph, name='get_graph'),
     path('record/', views.record_crud, name='record_crud'),
     path('record/list/', views.list_records, name='list_records'),
     path('record/<page>/', views.get_records, name='get_records'),

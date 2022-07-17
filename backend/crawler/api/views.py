@@ -1,3 +1,4 @@
+from django.db.models import Q
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
@@ -27,22 +28,74 @@ SEE_ERROR = 'See the "error" key in the response for details.'
     methods=['get'],
     operation_description='Returns an execution graph for the selected record. Not implemented yet.',
     manual_parameters=[
-        openapi.Parameter('record', openapi.IN_PATH, "ID of the record whose graph we want to receive",
-                          type=openapi.TYPE_INTEGER)
+        openapi.Parameter('record', openapi.IN_QUERY,
+                          "IDd of the record whose graph we want to receive, "
+                          + "concatenated by a comma without a whitespace.",
+                          type=openapi.TYPE_STRING, example="5,6,7")
     ],
     responses={
-        200: openapi.Response('Graph data for the request.'),
+        200: openapi.Response('Graph data for the request.', examples={"application/json": {
+            'nodes': [
+                {
+                    'model': 'api.node',
+                    'pk': 1,
+                    'fields': {
+                        'title': 'Node A',
+                        'crawl_time': '',
+                        'url': 'www.com.foo.baz',
+                        'owner': 5
+                    }
+                },
+                {
+                    'model': 'api.node',
+                    'pk': 2,
+                    'fields': {
+                        'title': 'Node B',
+                        'crawl_time': '',
+                        'url': 'www.com.foo.baz.sas',
+                        'owner': 5
+                    }
+                }
+            ],
+            'edges': [
+                {
+                    'model': 'api.edge',
+                    'pk': 1,
+                    'fields': {
+                        'source': 1,
+                        'target': 2
+                    }
+                }
+            ]
+        }}),
+        400: openapi.Response('List of queried Website Record IDs was either not present or they were not integers.')
     },
     tags=['Graph'])
 @api_view(['GET'])
-def get_graph(request, record):
+def get_graph(request):
     """
     Returns an execution graph for the selected record.
     @param request: the request that for routed to this API endpoint
-    @param record: ID of the record whose graph we want to receive
     @return: the request response
     """
-    return Response({"message": "Hello World!"}, status=status.HTTP_200_OK)
+    if 'records' not in request.query_params:
+        return Response({"error": f"The Website Record ID(s) query parameter was not found!"},
+                        status=status.HTTP_400_BAD_REQUEST)
+    records = request.query_params.get('records').split(',')
+    record_ids = []
+    for record in records:
+        if not record.isnumeric():
+            return Response({"error": f"The Website Record ID {record} is not an integer!"},
+                            status=status.HTTP_400_BAD_REQUEST)
+        record_ids.append(int(record))
+    edges = Edge.objects.select_related().filter(Q(source__owner__in=record_ids) | Q(target__owner__in=record_ids))
+    nodes = Node.objects.filter(owner__in=record_ids)
+    json_serializer = serializers.get_serializer("json")
+    serializer = json_serializer()
+    serialized_edges = json.loads(serializer.serialize(edges))
+    serialized_nodes = json.loads(serializer.serialize(nodes))
+    output = {"nodes": serialized_nodes, "edges": serialized_edges}
+    return Response(data=output, status=status.HTTP_200_OK)
 
 
 @swagger_auto_schema(
@@ -524,7 +577,7 @@ def list_records(request):
         200: openapi.Response('The specified `WebsiteRecord` was activated.'),
         400: openapi.Response('Invalid Record ID provided. ' + SEE_ERROR)
     },
-    tags=['Record'])
+    tags=['Website Record'])
 @api_view(['PUT'])
 def activate(request, record):
     """
@@ -549,7 +602,7 @@ def activate(request, record):
         200: openapi.Response('The specified `WebsiteRecord` was deactivated.'),
         400: openapi.Response('Invalid Record ID provided. ' + SEE_ERROR)
     },
-    tags=['Record'])
+    tags=['Website Record'])
 @api_view(['PUT'])
 def deactivate(request, record):
     """

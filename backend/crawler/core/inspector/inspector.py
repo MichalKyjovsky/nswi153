@@ -178,7 +178,7 @@ class Inspector(object):
         # Add leaf nodes
         out_dump = out_dump + [
             {"url": x, "domain": f"{urlsplit(x).netloc}", "executionTargets": [], "crawl_time": datetime.datetime.now(),
-             'title': None}
+             'title': f"{urlsplit(x).netloc}"} # TODO: Visit website title
             for x in
             filtered_urls]
 

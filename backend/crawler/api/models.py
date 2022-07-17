@@ -73,27 +73,50 @@ class WebsiteRecordManager(models.Manager):
 class NodeManager(models.Manager):
     fields = ('title', 'url', 'crawl_time', 'owner')
 
-    def create_node(self, json_data):
+    def valid_node_data(self, data):
+        """
+        Helper function for verification of the data for adding a new :class: `Node`.
+
+        """
+        for field in data:
+            if field not in self.fields or data[field] is None:
+                return False
+
+        return True
+
+    def create_node(self, dict_data: dict):
         """
         Creates a new :class: `Node` instance.
         """
-        dict_data = json.loads(json_data)
         dict_data = {k: dict_data[k] for k in dict_data if k in self.fields}
-        if not self.valid_record_data(dict_data) or len(dict_data) != len(self.fields):
+        if not self.valid_node_data(dict_data) or len(dict_data) != len(self.fields):
             raise ValueError
         return self.create(**dict_data)
 
 
 class EdgeManager(models.Manager):
-    fields = ('source_node', 'target_node')
+    fields = ('source', 'target')
 
-    def create_node(self, json_data):
+    def valid_edge_data(self, data):
+        """
+        Helper function for verification of the data for adding a new :class: `Edge`.
+
+        """
+        for field in data:
+            if field not in self.fields or data[field] is None:
+                return False
+
+        return True
+
+    def create_edge(self, dict_data: dict):
         """
         Creates a new :class: `Edge` instance.
         """
-        dict_data = json.loads(json_data)
+        print(dict_data)
         dict_data = {k: dict_data[k] for k in dict_data if k in self.fields}
-        if not self.valid_record_data(dict_data) or len(dict_data) != len(self.fields):
+        if not self.valid_edge_data(dict_data) or len(dict_data) != len(self.fields):
+            print(dict_data)
+            print(self.valid_edge_data(dict_data))
             raise ValueError
         return self.create(**dict_data)
 
@@ -119,7 +142,6 @@ class WebsiteRecord(models.Model):
     interval = models.IntegerField()
     active = models.BooleanField(default=False)
     regex = models.CharField(max_length=128)
-    # tags = models.ManyToManyField(Tag)
 
     objects = WebsiteRecordManager()
 

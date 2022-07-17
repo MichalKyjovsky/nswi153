@@ -1,4 +1,5 @@
-from api.models import Edge, Node
+from api.models import Edge, Node, WebsiteRecord
+from django.db import transaction
 
 
 def transform_graph(raw_nodes: list, record_id: int) -> [list, list]:
@@ -19,7 +20,8 @@ def transform_graph(raw_nodes: list, record_id: int) -> [list, list]:
             'title': node['title'],
             'crawl_time': node['crawl_time'],
             'url': node['url'],
-            'owner': record_id
+            # This is an expensive operation but I am not into implement json serializer
+            'owner': WebsiteRecord.objects.filter(id=record_id).first()
         })
 
         edges += [{'source': node['url'], 'target': target} for target in node['executionTargets']]
@@ -36,17 +38,20 @@ def persist_graph(nodes: list, edges: list) -> None:
     """
     db_nodes = [Node.objects.create_node(raw_node) for raw_node in nodes]
 
-    # Store all nodes
-    Node.objects.bulk_create(db_nodes)
+    # Store all nodes securely
+    with transaction.atomic():
+        for db_node in db_nodes:
+            db_node.save()
 
     # Create list of db_edges
-
     db_edges = []
 
-    for source, target in edges:
-        source_node = filter(lambda x: x.url == source, db_nodes)
-        target_node = filter(lambda x: x.url == target, db_nodes)
-        db_edges.append(Edge.objects.create_edge(source_node=source_node, target_node=target_node))
+    for edge in edges:
+        source_node = next((x for x in db_nodes if x.url == edge['source']), None)
+        target_node = next((x for x in db_nodes if x.url == edge['target']), None)
+        db_edges.append(Edge.objects.create_edge({"source": source_node, "target": target_node}))
 
-    Edge.objects.bulk_create(db_edges)
-
+    # Store all nodes securely
+    with transaction.atomic():
+        for db_edge in db_edges:
+            db_edge.save()

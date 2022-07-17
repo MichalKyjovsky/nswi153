@@ -11,7 +11,7 @@ from .models import *
 
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
-from tasks.crawler import run_crawler_task
+from ..tasks.crawler import manage_tasks
 
 status_mapper = {
     1: "IN PROGRESS",
@@ -637,7 +637,8 @@ def add_record(request):
                 record.tag_set.add(tag)
                 tag.save()
 
-        task = run_crawler_task.delay(record.url, record.regex)
+        # Run crawling
+        task = manage_tasks(record)
 
         return Response({"message": f"Record and its tags created successfully! (1 record, {len(tags)} tags)",
                          "taskId": task.id},

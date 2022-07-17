@@ -20,16 +20,7 @@ import FormControl from '@mui/material/FormControl';
 import Select, { SelectChangeEvent } from '@mui/material/Select';
 import ApiManager, { WebsiteRecordForSelect } from './ApiManager';
 import GraphVisualizer from './GraphVisualizer';
-import { LayoutGraph } from './Common';
-
-const initialNodes: Node[] = [
-    { id: '1', data: { label: 'Node 1' }, position: { x: 5, y: 5 } },
-    { id: '2', data: { label: 'Node 2' }, position: { x: 5, y: 100 } },
-];
-
-const initialEdges: Edge[] = [
-    { id: 'e1-2', source: '1', target: '2' },
-];
+import { Button, Stack } from '@mui/material';
 
 const fitViewOptions: FitViewOptions = {
     padding: 0.2
@@ -38,6 +29,7 @@ const fitViewOptions: FitViewOptions = {
 function VisualisationContent() {
     const [websiteRecordFilter, setWebsiteRecordFilter] = React.useState<number | undefined>(undefined);
     const [websiteRecords, setWebsiteRecords] = React.useState<WebsiteRecordForSelect[]>([]);
+    const [selectedNode, setSelectedNode] = React.useState<Node | null>(null);
 
     const manager = React.useMemo(() => new ApiManager(), []);
 
@@ -57,13 +49,29 @@ function VisualisationContent() {
         setWebsiteRecordFilter(value === undefined || value === noFilter ? undefined : Number(value));
     };
 
-    const visualizer = new GraphVisualizer(manager.getGraph());
-    visualizer.layout();
-    console.log(visualizer.graph);
-    const visualizedGraph = visualizer.getGraph(800, 600);
+    const [nodes, setNodes] = React.useState<Node[]>([]);
+    const [edges, setEdges] = React.useState<Edge[]>([]);
 
-    const [nodes, setNodes] = React.useState<Node[]>(visualizedGraph.nodes);
-    const [edges, setEdges] = React.useState<Edge[]>(visualizedGraph.edges);
+    const getGraph = React.useCallback(async (records: number | undefined) => {
+        setSelectedNode(null);
+        if (records !== undefined) {
+            const graph = await manager.getGraph(records.toString());
+            if (graph !== null) {
+                const visualizer = new GraphVisualizer(graph);
+                visualizer.layout();
+                const visualizedGraph = visualizer.getGraph(800, 600);
+                setNodes(visualizedGraph.nodes);
+                setEdges(visualizedGraph.edges);
+                return;
+            }
+        }
+        setNodes([]);
+        setEdges([]);
+    }, [setNodes, setEdges, manager]);
+
+    React.useEffect(() => {
+        getGraph(websiteRecordFilter);
+    }, [getGraph, websiteRecordFilter]);
 
     const onNodesChange = React.useCallback(
         (changes: NodeChange[]) => setNodes((nds) => applyNodeChanges(changes, nds)),
@@ -77,6 +85,10 @@ function VisualisationContent() {
         (connection: Connection) => setEdges((eds) => addEdge(connection, eds)),
         [setEdges]
     );
+
+    const onNodeDoubleClick = React.useCallback((event: React.MouseEvent, node: Node) => {
+        setSelectedNode(node);
+    }, [setSelectedNode]);
 
     return (
         <Box sx={{ display: 'flex' }}>
@@ -98,7 +110,7 @@ function VisualisationContent() {
                     >
                         <Typography
                             sx={{ flex: '1 1 100%' }}
-                            variant="h6"
+                            variant="h5"
                             id="tableTitle"
                             component="h1"
                             color="primary"
@@ -125,16 +137,57 @@ function VisualisationContent() {
                             </Select>
                         </FormControl>
                     </Toolbar>
-                    <Container maxWidth={false} sx={{ mt: 2, mb: 2, minWidth: 800, maxWidth: 1600, height: 600 }}>
-                        <ReactFlow
-                            nodes={nodes}
-                            edges={edges}
-                            onNodesChange={onNodesChange}
-                            onEdgesChange={onEdgesChange}
-                            onConnect={onConnect}
-                            fitView
-                            fitViewOptions={fitViewOptions}
-                        />
+                    <Container maxWidth={false} sx={{ mt: 2, mb: 2, minWidth: 800, maxWidth: 1600, height: 600, padding: 0 }}>
+                        <div style={{ display: 'flex', height: '100%' }}>
+                            <div style={{ flex: '1 1 100%' }}>
+                                <ReactFlow
+                                    nodes={nodes}
+                                    edges={edges}
+                                    onNodesChange={onNodesChange}
+                                    onEdgesChange={onEdgesChange}
+                                    onConnect={onConnect}
+                                    onNodeDoubleClick={onNodeDoubleClick}
+                                    fitView
+                                    fitViewOptions={fitViewOptions}
+                                />
+                            </div>
+                            <div style={{ flexBasis: 'auto', width: 250 }}>
+                                <Stack direction={'column'} spacing={1}>
+                                    <Typography
+                                        variant="h6"
+                                        color="primary"
+                                    >
+                                        Node details
+                                    </Typography>
+                                    {
+                                        selectedNode ? (
+                                            <React.Fragment>
+                                                <Typography
+                                                    variant="subtitle1"
+                                                    color="primary"
+                                                >
+                                                    URL
+                                                </Typography>
+                                                <Typography variant="body1"> {selectedNode.data.url}</Typography>
+                                                {selectedNode.data.crawlTime && selectedNode.data.crawlTime.trim() !== "" && (
+                                                    <React.Fragment>
+                                                        <Typography
+                                                            variant="subtitle1"
+                                                            color="primary"
+                                                        >
+                                                            Crawl time
+                                                        </Typography>
+                                                        <Typography variant="body1"> {selectedNode.data.crawlTime}</Typography>
+                                                    </React.Fragment>
+                                                )}
+                                                {(selectedNode.data.crawlTime && selectedNode.data.crawlTime.trim() !== "")
+                                                    ? <Button variant="contained" >Crawl {websiteRecords.filter(rec => rec.pk === websiteRecordFilter).join()} again</Button>
+                                                    : <Button variant="contained">Create new website record</Button>}
+                                            </React.Fragment>
+                                        ) : (<Typography variant="body1">No selected item</Typography>)}
+                                </Stack>
+                            </div>
+                        </div>
                     </Container>
                 </Container>
             </Box>

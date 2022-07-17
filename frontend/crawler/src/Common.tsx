@@ -115,14 +115,13 @@ export interface LayoutNode {
     layoutForceX: number;
     layoutForceY: number;
     data: {
-        title: string,
         crawlTime: string,
         url: string,
         owner: number
     }
 }
 
-export function createLayoutNode(id: string, title: string, crawlTime: string, url: string, owner: number): LayoutNode {
+export function createLayoutNode(id: string, crawlTime: string, url: string, owner: number): LayoutNode {
     return {
         id,
         layoutPosX: 0,
@@ -130,7 +129,6 @@ export function createLayoutNode(id: string, title: string, crawlTime: string, u
         layoutForceX: 0,
         layoutForceY: 0,
         data: {
-            title,
             crawlTime,
             url,
             owner
@@ -172,7 +170,7 @@ export function createLayoutGraph(nodes: LayoutNode[], edges: LayoutEdge[]): Lay
     };
 }
 
-const periodicityRegex = /^((\d+)d)?((\d+)h)?((\d+)m)?$/g;
+const periodicityRegex = /^((\d+)d)?((\d+)h)?((\d+)m)?$/;
 
 export function toPeriodicityString(period: number): string {
     let remaining = period;

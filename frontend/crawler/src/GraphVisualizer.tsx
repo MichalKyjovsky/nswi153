@@ -145,7 +145,7 @@ export default class GraphLayoutRenderer {
         const factorX = (viewWidth) / (this.graph.layoutMaxX - this.graph.layoutMinX);
         const factorY = (viewHeight) / (this.graph.layoutMaxY - this.graph.layoutMinY);
 
-        const nodes = this.graph.nodes.map(node => ({ id: node.id, data: { label: node.data.url }, position: this.translate(node, factorX, factorY) }))
+        const nodes = this.graph.nodes.map(node => ({ id: node.id, data: { ...node.data, label: node.data.url }, position: this.translate(node, factorX, factorY) }))
 
         const edges: Edge[] = this.graph.edges.map(edge => ({ id: `e${edge.source.id}-${edge.target.id}`, source: edge.source.id, target: edge.target.id, markerEnd: { type: MarkerType.ArrowClosed, color: 'black' } }))
 

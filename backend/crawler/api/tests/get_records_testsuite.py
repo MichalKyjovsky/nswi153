@@ -86,3 +86,9 @@ class GetRecordsTest(TestCase):
         assert len(response.data['records']) == 2
         assert len(response.data['records'][0]) > 0
         assert 'amazon' in response.data['records'][0]['fields']['url']
+
+    def test_get_records_by_url_and_label_substrings(self):
+        response = self.client.get('/api/record/1/?url-filter=amazon&label-filter=crawl')
+        assert 'error' not in response.data
+        assert len(response.data) == 3
+        assert len(response.data['records']) == 1

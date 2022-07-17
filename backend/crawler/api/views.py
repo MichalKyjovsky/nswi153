@@ -708,10 +708,10 @@ def load_and_filter_records(request):
     records = WebsiteRecord.objects.all().select_related()
 
     if 'url-filter' in request.query_params and request.query_params.get('url-filter') is not None:
-        records = records.filter(url=request.query_params.get('url-filter'))
+        records = records.filter(url__icontains=request.query_params.get('url-filter'))
 
     if 'label-filter' in request.query_params and request.query_params.get('label-filter') is not None:
-        records = records.filter(label=request.query_params.get('label-filter'))
+        records = records.filter(label__icontains=request.query_params.get('label-filter'))
 
     if 'tag-filter' in request.query_params and request.query_params.get('tag-filter') is not None:
         records = [record for record in records if

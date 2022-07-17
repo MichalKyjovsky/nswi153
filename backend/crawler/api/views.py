@@ -11,6 +11,7 @@ from .models import *
 
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
+from tasks.crawler import run_crawler_task
 
 status_mapper = {
     1: "IN PROGRESS",
@@ -227,7 +228,7 @@ def record_crud(request):
     """
     if request.method == 'GET':
         return get_record(request)
-    if request.method == 'POST':
+    if request.method == 'PUT':
         return update_record(request)
     if request.method == 'DELETE':
         return delete_record(request)
@@ -628,15 +629,18 @@ def add_record(request):
         record = WebsiteRecord.objects.create_record(json_data)
         tags = []
         if 'tags' in request.data:
-            tags = [Tag.objects.create_tag(tag.strip()) for tag in request.data['tags'].split(',')]
+            tags = [Tag.objects.create_tag(record, tag.strip()) for tag in request.data['tags'].split(',')]
         with transaction.atomic():
             # atomic to preserve consistency
             record.save()
             for tag in tags:
-                record.tags.add(tag)
+                record.tag_set.add(tag)
                 tag.save()
 
-        return Response({"message": f"Record and its tags created successfully! (1 record, {len(tags)} tags)"},
+        task = run_crawler_task.delay(record.url, record.regex)
+
+        return Response({"message": f"Record and its tags created successfully! (1 record, {len(tags)} tags)",
+                         "taskId": task.id},
                         status=status.HTTP_201_CREATED)
     except (ValueError, DatabaseError, IntegrityError, transaction.TransactionManagementError):
         return Response({"error": "Invalid record parameters entered!"}, status=status.HTTP_400_BAD_REQUEST)
@@ -755,7 +759,7 @@ def load_and_filter_records(request):
 
     if 'tag-filter' in request.query_params and request.query_params.get('tag-filter') is not None:
         records = [record for record in records if
-                   has_tag(record.tags.all(), request.query_params.get('tag-filter'))]
+                   has_tag(record.tag_set.all(), request.query_params.get('tag-filter'))]
 
     return records
 
@@ -771,7 +775,7 @@ def get_tags(records):
     for record in records:
         record_id = record.pk
         record_list = []
-        for tag in record.tags.all():
+        for tag in record.tag_set.all():
             record_list.append(tag.tag)
         record_tags[record_id] = record_list
 
@@ -858,21 +862,21 @@ def update_tags(data) -> None:
         record = WebsiteRecord.objects.select_related().filter(pk=data['id'])[0]  # get record and its tags
         new_tags = set(data['tags'].split(','))  # a set of tags that we want to have associated at the end
 
-        for tag in record.tags.all():
+        for tag in record.tag_set.all():
             if tag.tag in new_tags:
                 # preserved tag
                 new_tags.remove(tag.tag)  # remove from our consideration - was present, will be present
             else:
                 # removed tag
-                record.tags.remove(tag)  # remove reference from WebsiteRecord
+                tag.website_record.remove(tag) # remove reference from WebsiteRecord
                 tag.delete()  # remove from DB
 
         created_tags = []
         for tag in new_tags:
             # added tag
-            added_tag = Tag.objects.create_tag(tag.strip())
+            added_tag = Tag.objects.create_tag(record, tag.strip())
             created_tags.append(added_tag)  # add to list for later save operation
-            record.tags.add(added_tag)  # add new tag
+            record.tag_set.add(added_tag)  # add new tag
 
         with transaction.atomic():
             # atomic to preserve consistency

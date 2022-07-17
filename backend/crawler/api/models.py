@@ -30,7 +30,6 @@ class WebsiteRecordManager(models.Manager):
             return False
 
         if 'active' in data.keys() and data['active'] not in [True, False]:
-
             # invalid casting ValueError should be caught in the views.py
             return False
 
@@ -71,21 +70,40 @@ class WebsiteRecordManager(models.Manager):
         return True
 
 
+class NodeManager(models.Manager):
+    fields = ('title', 'url', 'crawl_time', 'owner')
+
+    def create_node(self, json_data):
+        """
+        Creates a new :class: `Node` instance.
+        """
+        dict_data = json.loads(json_data)
+        dict_data = {k: dict_data[k] for k in dict_data if k in self.fields}
+        if not self.valid_record_data(dict_data) or len(dict_data) != len(self.fields):
+            raise ValueError
+        return self.create(**dict_data)
+
+
+class EdgeManager(models.Manager):
+    fields = ('source_node', 'target_node')
+
+    def create_node(self, json_data):
+        """
+        Creates a new :class: `Edge` instance.
+        """
+        dict_data = json.loads(json_data)
+        dict_data = {k: dict_data[k] for k in dict_data if k in self.fields}
+        if not self.valid_record_data(dict_data) or len(dict_data) != len(self.fields):
+            raise ValueError
+        return self.create(**dict_data)
+
+
 class TagManager(models.Manager):
-    def create_tag(self, tag):
+    def create_tag(self, record, tag):
         """
         Creates a new :class: `Tag` instance.
         """
-        return self.create(tag=tag)
-
-
-class Tag(models.Model):
-    """
-    Represents a single :class: `WebsiteRecord` tag.
-    """
-    tag = models.CharField(max_length=64)
-
-    objects = TagManager()
+        return self.create(website_record=record, tag=tag)
 
 
 class WebsiteRecord(models.Model):
@@ -101,9 +119,19 @@ class WebsiteRecord(models.Model):
     interval = models.IntegerField()
     active = models.BooleanField(default=False)
     regex = models.CharField(max_length=128)
-    tags = models.ManyToManyField(Tag)
+    # tags = models.ManyToManyField(Tag)
 
     objects = WebsiteRecordManager()
+
+
+class Tag(models.Model):
+    """
+    Represents a single :class: `WebsiteRecord` tag.
+    """
+    tag = models.CharField(max_length=64)
+    website_record = models.ForeignKey(WebsiteRecord, on_delete=models.CASCADE)
+
+    objects = TagManager()
 
 
 class Execution(models.Model):
@@ -140,6 +168,8 @@ class Node(models.Model):
     url = models.CharField(max_length=2048)
     owner = models.ForeignKey(WebsiteRecord, on_delete=models.CASCADE)
 
+    objects = NodeManager()
+
 
 class Edge(models.Model):
     """
@@ -147,3 +177,5 @@ class Edge(models.Model):
     """
     source = models.ForeignKey(Node, on_delete=models.CASCADE, related_name='source_node')
     target = models.ForeignKey(Node, on_delete=models.CASCADE, related_name='target_node')
+
+    objects = EdgeManager()

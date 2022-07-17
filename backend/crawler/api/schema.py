@@ -36,7 +36,7 @@ class WebsiteRecordType(DjangoObjectType):
 
     @staticmethod
     def resolve_tags(website_record, *args, **kwargs):
-        return website_record.tags.all()
+        return website_record.tag_set.all()
 
 
 class ExecutionType(DjangoObjectType):

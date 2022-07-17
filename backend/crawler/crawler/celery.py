@@ -12,9 +12,6 @@ app.config_from_object("django.conf:settings", namespace="CELERY")
 #  Looks for Celery tasks from applications defined in settings.INSTALLED_APPS
 app.autodiscover_tasks(lambda: settings.INSTALLED_APPS)
 
+redbeat_redis_url = "redis://localhost:6379/1"
 
-@app.task
-def divide(x, y):
-    import time
-    time.sleep(5)
-    return x / y
+redbeat_lock_key = None

@@ -7,8 +7,7 @@
       "label": "my_label",
       "interval": 120,
       "active": "True",
-      "regex": ".*",
-      "tags": [1,3,5]
+      "regex": ".*"
     }
   },
   {
@@ -19,50 +18,55 @@
       "label": "amazon_crawl",
       "interval": 100,
       "active": "False",
-      "regex": "www.amazon.com.*",
-      "tags": [2,4,6]
+      "regex": "www.amazon.com.*"
     }
   },
   {
     "model": "api.tag",
     "pk": 1,
     "fields": {
-      "tag": "1"
+      "tag": "1",
+      "website_record": 5
     }
   },
   {
     "model": "api.tag",
     "pk": 2,
     "fields": {
-      "tag": "2"
+      "tag": "2",
+      "website_record": 5
     }
   },
   {
     "model": "api.tag",
     "pk": 3,
     "fields": {
-      "tag": "3"
+      "tag": "3",
+      "website_record": 5
     }
   },
   {
     "model": "api.tag",
     "pk": 4,
     "fields": {
-      "tag": "a"
+      "tag": "a",
+      "website_record": 6
     }
   },
   {
     "model": "api.tag",
     "pk": 5,
     "fields": {
-      "tag": "b"
+      "tag": "b",
+      "website_record": 6
     }
   },
   {
     "model": "api.tag",
     "pk": 6,
     "fields": {
-      "tag": "c"
+      "tag": "c",
+      "website_record": 6
     }
   },
   {

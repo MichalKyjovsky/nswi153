@@ -1,3 +1,4 @@
+import datetime
 import logging
 
 from bs4 import BeautifulSoup
@@ -148,13 +149,17 @@ class Inspector(object):
                 path = url[:url.rfind('/') + 1] if '/' in parts.path else url
 
                 # Initialize current node
-                cur_node = {"url": url, "domain": base, "executionTargets": []}
+                cur_node = {"url": url, "domain": base, "executionTargets": [], "crawl_time": datetime.datetime.now()}
 
                 soup = BeautifulSoup(response.text, "lxml")
 
                 # Merge to be processed URLs with the current set of newly observed domains
                 urls_to_be_processed = urls_to_be_processed.union(
                     cls._inspect_url(soup.find_all('a'), base_url, strip_base, path))
+
+                website_title = soup.find('title')
+
+                cur_node['title'] = website_title.text if website_title else None
 
                 cls._handle_urls(urls_to_be_processed, new_urls, processed_urls, cur_node, filtered_urls, base_url)
 
@@ -171,7 +176,10 @@ class Inspector(object):
                 LOGGER.log(logging.ERROR, "Failed to process % s" % url)
 
         # Add leaf nodes
-        out_dump = out_dump + [{"url": x, "domain": f"{urlsplit(x).netloc}", "executionTargets": []} for x in
-                               filtered_urls]
+        out_dump = out_dump + [
+            {"url": x, "domain": f"{urlsplit(x).netloc}", "executionTargets": [], "crawl_time": datetime.datetime.now(),
+             'title': None}
+            for x in
+            filtered_urls]
 
         return sorted(out_dump, key=itemgetter("url"))

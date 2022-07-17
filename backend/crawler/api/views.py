@@ -11,7 +11,7 @@ from .models import *
 
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
-from ..tasks.crawler import manage_tasks
+from tasks.crawler import manage_tasks
 
 status_mapper = {
     1: "IN PROGRESS",
@@ -530,9 +530,15 @@ def get_execution(request, record, page):
     tags=['Website Record'])
 @api_view(['POST'])
 def start_execution(request):
-    # TODO: MichalKyjovsky -> get parameter from request body and call celery/something to start?
-    #  Or is it the same as celery endpoint?
-    pass
+    if WebsiteRecord.objects.filter().exists():
+        # TODO: Sanitize data
+        task = manage_tasks(WebsiteRecord.objects.get(request.body['id']))
+        return Response({"message": "Task started.",
+                         "taskId": task},
+                        status=status.HTTP_201_CREATED)
+    else:
+        return Response({"error": "Invalid record parameters entered!"}, status=status.HTTP_400_BAD_REQUEST)
+
 
 
 @swagger_auto_schema(
@@ -641,7 +647,7 @@ def add_record(request):
         task = manage_tasks(record)
 
         return Response({"message": f"Record and its tags created successfully! (1 record, {len(tags)} tags)",
-                         "taskId": task.id},
+                         "taskId": task},
                         status=status.HTTP_201_CREATED)
     except (ValueError, DatabaseError, IntegrityError, transaction.TransactionManagementError):
         return Response({"error": "Invalid record parameters entered!"}, status=status.HTTP_400_BAD_REQUEST)
@@ -700,7 +706,13 @@ def update_record(request):
     json_data = json.dumps(request.data)
     if WebsiteRecord.objects.update_record(json_data):
         update_tags(request.data)
-        return Response({"message": f"Record was updated successfully!"}, status=status.HTTP_204_NO_CONTENT)
+
+        # Would not get here if ID not present
+        # OPTIONAL: Figure something better
+        data = json.loads(json_data)
+        task = manage_tasks(WebsiteRecord.objects.get(data['id']), True)
+        return Response({"message": f"Record was updated successfully!",
+                         "taskId": task}, status=status.HTTP_204_NO_CONTENT)
     return Response({"error": "Invalid data! Record was not updated."}, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -869,7 +881,7 @@ def update_tags(data) -> None:
                 new_tags.remove(tag.tag)  # remove from our consideration - was present, will be present
             else:
                 # removed tag
-                tag.website_record.remove(tag) # remove reference from WebsiteRecord
+                tag.website_record.remove(tag)  # remove reference from WebsiteRecord
                 tag.delete()  # remove from DB
 
         created_tags = []

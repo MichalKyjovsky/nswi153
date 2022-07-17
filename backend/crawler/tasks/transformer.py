@@ -1,5 +1,23 @@
-from api.models import Edge, Node, WebsiteRecord
+from ..api.models import Edge, Node, WebsiteRecord
 from django.db import transaction
+from urllib.parse import urlsplit
+
+
+def get_domain_graph(record: WebsiteRecord):
+    edges = []
+
+    # Get all edges of the current WebsiteRecord
+    raw_edges = Edge.objects.filter(owner=record).all()
+
+    for edge in raw_edges:
+        edges.append({
+            'source': f"{urlsplit(edge.source.url).netloc}",
+            'target': f"{urlsplit(edge.target.url).netloc}",
+        })
+
+    # Make the edges unique
+    return list(set(edges))
+
 
 
 def transform_graph(raw_nodes: list, record_id: int) -> [list, list]:

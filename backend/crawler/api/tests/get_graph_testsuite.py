@@ -17,7 +17,6 @@ class GetRecordTest(TestCase):
         assert 'error' in response.data
         assert response.status_code == status.HTTP_404_NOT_FOUND
 
-
     def test_get_graph_invalid_record_format(self):
         response = self.client.get('/api/graph/potato/')
         assert 'error' in response.data

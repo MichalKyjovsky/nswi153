@@ -53,9 +53,9 @@ class WebsiteRecordManager(models.Manager):
         Updates a :class: `WebsiteRecord` instance.
         """
         dict_data = json.loads(json_data)
-        if 'id' not in dict_data.keys() or not dict_data['id'].isnumeric():
+        if 'id' not in dict_data.keys() or type(dict_data['id']) is not int:
             return False
-        record = WebsiteRecord.objects.filter(pk=int(dict_data['id']))
+        record = WebsiteRecord.objects.filter(pk=dict_data['id'])
         if len(record) < 1:
             return False
         record = record[0]

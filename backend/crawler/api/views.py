@@ -1,3 +1,5 @@
+import sys
+
 from django.db.models import Q
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
@@ -23,7 +25,7 @@ status_mapper = {
 }
 
 OPTIONAL_CLAUSE = "Several filters can be used at the same time."
-SEE_ERROR = 'See the "error" key in the response for details.'
+SEE_ERROR = 'See the "error" key in the response body for details.'
 
 
 @swagger_auto_schema(
@@ -74,13 +76,15 @@ SEE_ERROR = 'See the "error" key in the response for details.'
                 }
             ]
         }}),
-        400: openapi.Response('List of queried Website Record IDs was either not present or they were not integers.')
+        400: openapi.Response('List of queried Website Record IDs was either not present or they were not integers. '
+                              + SEE_ERROR)
     },
     tags=['Graph'])
 @api_view(['GET'])
 def get_graph(request, mode):
     """
     Returns an execution graph for the selected record.
+    @param mode: mode of the graph - either 'domain' or 'website' (if non-domain string, 'website' is assumed)
     @param request: the request that for routed to this API endpoint
     @return: the request response
     """
@@ -129,12 +133,13 @@ def get_graph(request, mode):
             }
         ]}),
         400: openapi.Response(
-            "Invalid request! The request must contain the 'record' key with ID specified as a numeric value."),
-        404: openapi.Response('Record with ID {record_id} was not found!')
+            "Invalid request! The request must contain the 'record' key with ID specified as a numeric value. "
+            + SEE_ERROR),
+        404: openapi.Response('Record with ID {record_id} was not found! ' + SEE_ERROR)
     },
     tags=['Website Record'])
 @swagger_auto_schema(
-    method='put',
+    method='post',
     operation_description='Adds a new `WebsiteRecord` to the database.',
     request_body=openapi.Schema(
         type=openapi.TYPE_OBJECT,
@@ -168,7 +173,7 @@ def get_graph(request, mode):
     },
     tags=['Website Record'])
 @swagger_auto_schema(
-    method='post',
+    method='put',
     operation_description='Updates details of a `WebsiteRecord` in the database.',
     request_body=openapi.Schema(
         type=openapi.TYPE_OBJECT,
@@ -201,7 +206,7 @@ def get_graph(request, mode):
         }),
     responses={
         204: openapi.Response('Record was updated successfully!'),
-        400: openapi.Response('Invalid data! Record was not updated.'),
+        400: openapi.Response('Invalid data! Record was not updated. ' + SEE_ERROR),
     },
     tags=['Website Record'])
 @swagger_auto_schema(
@@ -527,16 +532,21 @@ def get_execution(request, record, page):
     operation_description='Starts crawler execution of a specified `WebsiteRecord`.',
     responses={
         200: openapi.Response('Crawling has started or it was placed in a queue. No body.'),
-        400: openapi.Response('The `WebsiteRecord` ID was not present or is invalid.')
+        400: openapi.Response('The `WebsiteRecord` ID was not present or is invalid. ' + SEE_ERROR)
     },
-    tags=['Website Record'])
+    tags=['Execution'])
 @api_view(['POST'])
-def start_execution(request):
+def start_execution(request, record):
     # Get record id from
 
     if WebsiteRecord.objects.filter().exists():
         # TODO: Sanitize data
-        task = manage_tasks(WebsiteRecord.objects.get(request.body['id']))
+        if 'test' not in sys.argv:
+            # Run crawling
+            task = manage_tasks(WebsiteRecord.objects.get(request.body['id']))
+        else:
+            task = 0
+
         return Response({"message": "Task started.",
                          "taskId": task},
                         status=status.HTTP_201_CREATED)
@@ -646,8 +656,11 @@ def add_record(request):
                 record.tag_set.add(tag)
                 tag.save()
 
-        # Run crawling
-        task = manage_tasks(record)
+        if 'test' not in sys.argv:
+            # Run crawling
+            task = manage_tasks(record)
+        else:
+            task = 0
 
         return Response({"message": f"Record and its tags created successfully! (1 record, {len(tags)} tags)",
                          "taskId": task},
@@ -706,14 +719,20 @@ def update_record(request):
     @param request: the request that for routed to this API endpoint
     @return: the request response
     """
-    json_data = json.dumps(request.data)
+    json_data = request.body.decode('utf-8')
     if WebsiteRecord.objects.update_record(json_data):
         update_tags(request.data)
 
         # Would not get here if ID not present
         # OPTIONAL: Figure something better
         data = json.loads(json_data)
-        task = manage_tasks(WebsiteRecord.objects.get(data['id']), True)
+
+        if 'test' not in sys.argv:
+            # Run crawling
+            task = manage_tasks(WebsiteRecord.objects.get(data['id']), True)
+        else:
+            task = 0
+
         return Response({"message": f"Record was updated successfully!",
                          "taskId": task}, status=status.HTTP_204_NO_CONTENT)
     return Response({"error": "Invalid data! Record was not updated."}, status=status.HTTP_400_BAD_REQUEST)
@@ -828,7 +847,6 @@ def add_tags(response_dict, record_tags):
         pk = model['pk']
         if pk in record_tags:
             model['tags'] = record_tags[pk]
-        del model['fields']['tags']
     return response_dict
 
 
@@ -884,7 +902,6 @@ def update_tags(data) -> None:
                 new_tags.remove(tag.tag)  # remove from our consideration - was present, will be present
             else:
                 # removed tag
-                tag.website_record.remove(tag)  # remove reference from WebsiteRecord
                 tag.delete()  # remove from DB
 
         created_tags = []

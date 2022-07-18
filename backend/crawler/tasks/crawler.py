@@ -6,7 +6,7 @@ from redbeat import RedBeatSchedulerEntry
 from api.models import WebsiteRecord
 
 from .transformer import transform_graph, persist_graph
-from crawler.celery import app
+from crawler.celery import app, celery_is_active
 
 
 @app.task(bind=True)
@@ -25,7 +25,7 @@ def schedule_periodic_crawler_task(url: str, regex: str, record_id: int, interva
 
 
 def manage_tasks(record: WebsiteRecord, reschedule: bool = False):
-    if 'test' in sys.argv:
+    if 'test' in sys.argv or not celery_is_active():
         return 0
 
     if not reschedule:
@@ -49,12 +49,18 @@ def manage_tasks(record: WebsiteRecord, reschedule: bool = False):
 
 
 def stop_periodic_task(record: WebsiteRecord):
+    if not celery_is_active():
+        return
+
     if 'test' not in sys.argv:
         if record.job_id and record.interval:
             RedBeatSchedulerEntry.from_key(record.job_id, app=app).delete()
 
 
 def start_periodic_task(record: WebsiteRecord):
+    if not celery_is_active():
+        return
+
     if 'test' not in sys.argv:
         if not record.job_id and record.interval:
             schedule_periodic_crawler_task(record.url, record.regex, record.id, record.interval)

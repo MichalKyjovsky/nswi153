@@ -549,7 +549,12 @@ def start_execution(request, record):
     record_rs = WebsiteRecord.objects.filter(pk=record_id)
     if record_rs.exists():
         # Run crawling
-        task = manage_tasks(record_rs)
+        try:
+            task = manage_tasks(record_rs)
+
+        except Exception:
+            return Response({"error": "Celery server crashed processing the request!"},
+                            status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         return Response({"message": "Task started.",
                          "taskId": task},
@@ -684,7 +689,11 @@ def update_record(request):
         data = json.loads(json_data)
 
         # Run crawling
-        task = manage_tasks(WebsiteRecord.objects.get(id=data['id']), True)
+        try:
+            task = manage_tasks(WebsiteRecord.objects.get(id=data['id']), True)
+        except Exception:
+            return Response({"error": "Celery server crashed processing the request!"},
+                            status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         return Response({"message": f"Record was updated successfully!",
                          "taskId": task}, status=status.HTTP_204_NO_CONTENT)

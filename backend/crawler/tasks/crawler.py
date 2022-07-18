@@ -35,9 +35,11 @@ def manage_tasks(record: WebsiteRecord, reschedule: bool = False):
         elif not record.interval:
             return run_crawler_task.delay(record.url, record.regex, record.id).id
     else:
-        if record.interval:
+        if record.active and record.interval:
             RedBeatSchedulerEntry.from_key(record.job_id, app=app).delete()
             return schedule_periodic_crawler_task(record.url, record.regex, record.id, record.interval).key
+        elif not record.active:
+            return run_crawler_task.delay(record.url, record.regex, record.id).id
 
 
 def stop_periodic_task(record: WebsiteRecord):

@@ -95,7 +95,8 @@ interface GraphResponseNode {
     fields: {
         crawl_time: string,
         url: string,
-        owner: number
+        owner: number,
+        boundary_record: boolean
     }
 }
 
@@ -235,7 +236,7 @@ export default class ApiManager {
             const data: GraphResponse = response.data;
 
             const nodes = data.nodes
-                .map(node => createLayoutNode(node.pk.toString(), node.fields.crawl_time, node.fields.url, node.fields.owner));
+                .map(node => createLayoutNode(node.pk.toString(), node.fields.crawl_time, node.fields.url, node.fields.owner, node.fields.boundary_record));
 
             const nodesMap: Record<string, LayoutNode> = {};
             nodes.forEach(node => nodesMap[node.id] = node);

@@ -2,6 +2,7 @@ import * as React from 'react';
 import Box from '@mui/material/Box';
 import Container from '@mui/material/Container';
 import Paper from '@mui/material/Paper';
+import Tooltip from '@mui/material/Tooltip';
 import Table from '@mui/material/Table';
 import TableBody from '@mui/material/TableBody';
 import TableCell from '@mui/material/TableCell';
@@ -15,17 +16,29 @@ import Chip from '@mui/material/Chip';
 import IconButton from '@mui/material/IconButton';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
+import ExecutionIcon from '@mui/icons-material/Settings';
 import Button from '@mui/material/Button';
 import Dialog from '@mui/material/Dialog';
 import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
 import DialogContentText from '@mui/material/DialogContentText';
 import DialogTitle from '@mui/material/DialogTitle';
+import Snackbar from '@mui/material/Snackbar';
+import MuiAlert, { AlertProps } from '@mui/material/Alert';
 import SitesToolbar from './SitesToolbar';
 import NewSiteModal from './EditSiteModal';
 import { WebsiteRecord, emptyWebsiteRecord, WebsiteRecordForView, Order } from './Common';
-import WebsiteRecordManager from './WebsiteRecordManager';
+import ApiManager from './ApiManager';
 import SitesTableHead from './SitesTableHead';
+
+const Alert = React.forwardRef<HTMLDivElement, AlertProps>(function Alert(
+    props,
+    ref,
+) {
+    return <MuiAlert elevation={6} ref={ref} variant="filled" {...props} />;
+});
+
+type Severity = "info" | "success" | "warning" | "error";
 
 function SitesContent() {
     const [page, setPage] = React.useState(0);
@@ -42,10 +55,14 @@ function SitesContent() {
     const [tagsFilter, setTagsFilter] = React.useState("");
     const [order, setOrder] = React.useState<Order>('asc');
     const [orderBy, setOrderBy] = React.useState<keyof WebsiteRecordForView>('label');
+    const [notificationOpen, setNotificationOpen] = React.useState(false);
+    const [notificationSeverity, setNotificationSeverity] = React.useState<Severity>("info");
+    const [notificationMessage, setNotificationMessage] = React.useState("");
 
-    const manager = React.useMemo(() => new WebsiteRecordManager(), []);
+
+    const manager = React.useMemo(() => new ApiManager(), []);
     const getRows = React.useCallback(async (pageSize: number, pageNumber: number, lblFilter: string, tags: string, url: string, sortOrder: Order, sortProperty: keyof WebsiteRecordForView) => {
-        const response = await manager.getPage(pageSize, pageNumber, lblFilter, tags, url, sortOrder, sortProperty);
+        const response = await manager.getRecordPage(pageSize, pageNumber, lblFilter, tags, url, sortOrder, sortProperty);
         setRows(response ? response.records : []);
         response && setTotalRecords(response.totalRecords);
     }, [manager]);
@@ -53,6 +70,12 @@ function SitesContent() {
     React.useEffect(() => {
         getRows(rowsPerPage, page, labelFilter, tagsFilter, urlFilter, order, orderBy);
     }, [page, rowsPerPage, labelFilter, tagsFilter, urlFilter, order, orderBy, getRows]);
+
+    const notify = React.useCallback((severity: Severity, message: string) => {
+        setNotificationMessage(message);
+        setNotificationSeverity(severity);
+        setNotificationOpen(true);
+    }, [setNotificationOpen, setNotificationSeverity, setNotificationMessage]);
 
     // Avoid a layout jump when reaching the last page with empty rows.
     const emptyRows = totalRecords > rowsPerPage ? rowsPerPage - rows.length : 0;
@@ -88,9 +111,10 @@ function SitesContent() {
         }
     };
 
-    const handleCloseEditModal = (success: boolean) => {
+    const handleCloseEditModal = (editedRecord: number | null) => {
         setEditModalOpen(false);
-        if (success) {
+        if (editedRecord !== null) {
+            notify("success", "Record was successfully saved.");
             getRows(rowsPerPage, page, labelFilter, tagsFilter, urlFilter, order, orderBy);
         }
     }
@@ -114,13 +138,30 @@ function SitesContent() {
     const handleRecordDeleteClose = async (shouldDelete: boolean) => {
         setConfirmDeleteOpen(false);
         if (shouldDelete) {
-            try {
-                await manager.deleteRecord(deletedRecord);
-            } catch (error) {
-                console.log(error);
+            const response = await manager.deleteRecord(deletedRecord);
+            if (response) {
+                notify("success", "Record was successfully deleted.");
+            } else {
+                notify("error", "An error occured when deleting the record.");
             }
             getRows(rowsPerPage, page, labelFilter, tagsFilter, urlFilter, order, orderBy);
         }
+    };
+
+    const handleRecordExecuteClick = React.useCallback(async (id: number) => {
+        const success = await manager.executeRecord(id);
+        if (success) {
+            notify("info", "Execution has started.");
+        } else {
+            notify("error", "Failed to start the execution.");
+        }
+    }, [manager, notify]);
+
+    const handleNotificationClose = (event?: React.SyntheticEvent | Event, reason?: string) => {
+        if (reason === 'clickaway') {
+            return;
+        }
+        setNotificationOpen(false);
     };
 
     return (
@@ -192,8 +233,15 @@ function SitesContent() {
                                             <TableCell>{row.last_crawl}</TableCell>
                                             <TableCell>{row.lastExecutionStatus}</TableCell>
                                             <TableCell>
-                                                <IconButton onClick={() => handleEditRecordClick(row.pk)}><EditIcon /></IconButton>
-                                                <IconButton onClick={() => handleRecordDeleteClick(row.pk)}><DeleteIcon /></IconButton>
+                                                <Tooltip title="Edit">
+                                                    <IconButton onClick={() => handleEditRecordClick(row.pk)}><EditIcon /></IconButton>
+                                                </Tooltip>
+                                                <Tooltip title="Execute">
+                                                    <IconButton onClick={() => handleRecordExecuteClick(row.pk)}><ExecutionIcon /></IconButton>
+                                                </Tooltip>
+                                                <Tooltip title="Delete">
+                                                    <IconButton onClick={() => handleRecordDeleteClick(row.pk)}><DeleteIcon /></IconButton>
+                                                </Tooltip>
                                             </TableCell>
                                         </TableRow>
                                     );
@@ -204,7 +252,7 @@ function SitesContent() {
                                             height: 55 * emptyRows,
                                         }}
                                     >
-                                        <TableCell colSpan={6} />
+                                        <TableCell colSpan={8} />
                                     </TableRow>
                                 )}
                             </TableBody>
@@ -212,7 +260,7 @@ function SitesContent() {
                                 <TableRow>
                                     <TablePagination
                                         rowsPerPageOptions={[5, 10, 25]}
-                                        colSpan={6}
+                                        colSpan={8}
                                         count={totalRecords}
                                         rowsPerPage={rowsPerPage}
                                         page={page}
@@ -224,6 +272,20 @@ function SitesContent() {
                             </TableFooter>
                         </Table>
                     </TableContainer>
+                    <Snackbar
+                        open={notificationOpen}
+                        autoHideDuration={6000}
+                        onClose={handleNotificationClose}
+                        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+                    >
+                        <Alert
+                            onClose={handleNotificationClose}
+                            severity={notificationSeverity}
+                            sx={{ width: '100%' }}
+                        >
+                            {notificationMessage}
+                        </Alert>
+                    </Snackbar>
                 </Container>
             </Box>
         </Box>

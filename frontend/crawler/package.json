@@ -58,6 +58,7 @@
     "react-app-polyfill": "^2.0.0",
     "react-dev-utils": "^11.0.3",
     "react-dom": "latest",
+    "react-flow-renderer": "^10.3.10",
     "react-refresh": "^0.8.3",
     "react-router-dom": "^6.3.0",
     "resolve": "1.18.1",

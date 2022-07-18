@@ -336,7 +336,7 @@ def get_records(request, page):
     response_dict = add_execution_details(response_dict)
     sort_property, is_ascending = get_sort_details(request)
     if sort_property is not None and sort_property != 'last_crawl':
-        response_dict['records'].sort(key=lambda a: a['fields'].__getitem__(sort_property), reverse=is_ascending)
+        response_dict['records'].sort(key=lambda a: a['fields'].__getitem__(sort_property).lower(), reverse=is_ascending)
     elif sort_property == 'last_crawl':
         response_dict['records'].sort(key=lambda a: a.__getitem__(sort_property), reverse=is_ascending)
     return Response(response_dict, status=status.HTTP_200_OK)

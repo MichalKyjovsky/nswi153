@@ -9,7 +9,7 @@ class GetRecordTest(TestCase):
         response = self.client.get('/api/record/?record=5')
         assert 'error' not in response.data
         assert len(response.data) == 1
-        assert response.data[0]['fields']['label'] == 'my_label'
+        assert response.data[0]['fields']['label'] == 'My_label'
         assert len(response.data[0]['fields']['tags']) == 3
         assert 'b' in response.data[0]['fields']['tags']
 

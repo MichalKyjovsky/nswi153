@@ -646,13 +646,14 @@ def add_record(request):
     json_data = request.body.decode('utf-8')
     try:
         record = WebsiteRecord.objects.create_record(json_data)
+        tags = []
         if 'tags' in request.data:
             tags = [Tag.objects.create_tag(record, tag.strip()) for tag in request.data['tags'].split(',')]
             with transaction.atomic():
                 # atomic to preserve consistency
                 record.save()
                 for tag in tags:
-                    if len(tag.strip()) > 0:  # non-empty string
+                    if len(tag.tag.strip()) > 0:  # non-empty string
                         tag.save()
 
         if 'test' not in sys.argv:

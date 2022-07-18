@@ -1,3 +1,5 @@
+import sys
+
 from celery import shared_task
 import celery.schedules
 from core.inspector.inspector import Inspector
@@ -24,6 +26,9 @@ def schedule_periodic_crawler_task(url: str, regex: str, record_id: int, interva
 
 
 def manage_tasks(record: WebsiteRecord, reschedule: bool = False):
+    if 'test' in sys.argv:
+        return 0
+
     if not reschedule:
         if record.interval:
             return schedule_periodic_crawler_task(record.url, record.regex, record.id, record.interval).key

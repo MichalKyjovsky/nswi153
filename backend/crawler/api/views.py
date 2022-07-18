@@ -541,11 +541,8 @@ def start_execution(request, record):
 
     if WebsiteRecord.objects.filter().exists():
         # TODO: Sanitize data
-        if 'test' not in sys.argv:
-            # Run crawling
-            task = manage_tasks(WebsiteRecord.objects.get(request.body['id']))
-        else:
-            task = 0
+        # Run crawling
+        task = manage_tasks(WebsiteRecord.objects.get(request.body['id']))
 
         return Response({"message": "Task started.",
                          "taskId": task},
@@ -656,11 +653,8 @@ def add_record(request):
                     if len(tag.tag.strip()) > 0:  # non-empty string
                         tag.save()
 
-        if 'test' not in sys.argv:
-            # Run crawling
-            task = manage_tasks(record)
-        else:
-            task = 0
+        # Run crawling
+        task = manage_tasks(record)
 
         return Response({"message": f"Record and its tags created successfully! (1 record, {len(tags)} tags)",
                          "taskId": task},
@@ -727,11 +721,9 @@ def update_record(request):
         # OPTIONAL: Figure something better
         data = json.loads(json_data)
 
-        if 'test' not in sys.argv:
-            # Run crawling
-            task = manage_tasks(WebsiteRecord.objects.get(data['id']), True)
-        else:
-            task = 0
+        # Run crawling
+        task = manage_tasks(WebsiteRecord.objects.get(pk=data['id']), True)
+
 
         return Response({"message": f"Record was updated successfully!",
                          "taskId": task}, status=status.HTTP_204_NO_CONTENT)

@@ -1,5 +1,5 @@
 version: "3.9"
-   
+
 services:
   db:
     image: postgres
@@ -12,8 +12,8 @@ services:
 
   frontend:
     build:
-        context: ./frontend
-        dockerfile: Dockerfile
+      context: ./frontend
+      dockerfile: Dockerfile
     volumes:
       - './frontend/crawler:/usr/src/frontend/crawler'
       - '/usr/src/frontend/crawler/node_modules'
@@ -21,14 +21,20 @@ services:
       - "3000:3000"
     environment:
       - CHOKIDAR_USEPOLLING=true
+    depends_on:
+      - backend
 
   backend:
     build:
-        context: ./backend
-        dockerfile: Dockerfile
-    command: python manage.py runserver 0.0.0.0:8000 # On production change for Uvicorn
+      context: ./backend
+      dockerfile: Dockerfile
+    #    command: python manage.py runserver 0.0.0.0:8000 # On production change for Uvicorn
+    image: django_web_crawler
+    command: /start.sh
     volumes:
       - ./backend/crawler:/usr/src/backend/crawler
+    env_file:
+      - ./.env/.dev
     ports:
       - "8000:8000"
     environment:
@@ -36,24 +42,55 @@ services:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
     depends_on:
-      - db
-
-  celery:
-    build:
-        context: ./backend
-        dockerfile: Dockerfile
-    command: celery worker --app=core --loglevel=info
-    volumes:
-      - ./backend/crawler:/usr/src/backend/crawler
-    environment:
-      - DEBUG=1
-      - SECRET_KEY=dbaa1_i7%*3r9-=z-+_mz4r-!qeed@(-a_r(g@k8jo8y3r27%m
-      - DJANGO_ALLOWED_HOSTS=localhost 127.0.0.1 [::1]
-      - CELERY_BROKER=redis://redis:6379/0
-      - CELERY_BACKEND=redis://redis:6379/0
-    depends_on:
-      - backend
       - redis
+      - db
 
   redis:
     image: redis:6-alpine
+
+  celery_worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    image: django_celery_worker
+    command: /start-celeryworker.sh
+    volumes:
+      - ./backend:/usr/src/backend
+    env_file:
+      - ./.env/.dev
+    depends_on:
+      - redis
+      - db
+
+  celery_beat:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    image: django_celery_beat
+    command: /start-celerybeat.sh
+    volumes:
+      - ./backend:/usr/src/backend
+    env_file:
+      - ./.env/.dev
+    depends_on:
+      - redis
+      - db
+
+  flower:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    image: django_celery_flower
+    command: /start-flower.sh
+    volumes:
+      - ./backend:/usr/src/backend
+    env_file:
+      - ./.env/.dev
+    ports:
+      - "5557:5555"
+    depends_on:
+      - redis
+      - db
+
+volumes:
+  postgres_data:

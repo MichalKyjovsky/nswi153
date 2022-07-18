@@ -6,10 +6,10 @@ class GetRecordTest(TestCase):
     fixtures = ['basic.json']
 
     def test_get_valid_record(self):
-        response = self.client.get('/api/record/?record=5')
+        response = self.client.get('/api/record/?record=6')
         assert 'error' not in response.data
         assert len(response.data) == 1
-        assert response.data[0]['fields']['label'] == 'My_label'
+        assert response.data[0]['fields']['label'] == 'amazon_crawl'
         assert len(response.data[0]['fields']['tags']) == 3
         assert 'b' in response.data[0]['fields']['tags']
 

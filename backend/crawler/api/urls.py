@@ -17,7 +17,7 @@ schema_view = get_schema_view(
 )
 
 urlpatterns = [
-    path('graph/', views.get_graph, name='get_graph'),
+    path('graph/<mode>/', views.get_graph, name='get_graph'),
     path('record/', views.record_crud, name='record_crud'),
     path('record/list/', views.list_records, name='list_records'),
     path('record/<page>/', views.get_records, name='get_records'),
@@ -26,6 +26,5 @@ urlpatterns = [
     path('execution/<record>/', views.start_execution, name='start_execution'),
     path('activate/<record>/', views.activate, name='activate_record'),
     path('deactivate/<record>/', views.deactivate, name='deactivate_record'),
-    path('celery/', views.run_celery, name='run_celery'),
     path('docs/', schema_view.with_ui('swagger', cache_timeout=0), name='api_docs')
 ]

@@ -161,13 +161,13 @@ export default function NewSiteModal(props: EditSiteModalProps) {
             console.log(data);
             let editedRecord = record.pk ? record.pk : null;
             if (isEdit) {
-                const response = await inst.post("record/", data);
+                const response = await inst.put("record/", data);
                 if (response.status > 204) {
                     // show error
                     console.log(response);
                 }
             } else {
-                const response = await inst.put("record/", data);
+                const response = await inst.post("record/", data);
                 if (response.status > 201) {
                     // show error
                     console.log(response);

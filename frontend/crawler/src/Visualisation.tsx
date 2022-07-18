@@ -25,6 +25,8 @@ import FormLabel from '@mui/material/FormLabel';
 import ApiManager, { WebsiteRecordForSelect } from './ApiManager';
 import GraphVisualizer from './GraphVisualizer';
 import { Button, Stack } from '@mui/material';
+import NewSiteModal from './EditSiteModal';
+import { WebsiteRecord, emptyWebsiteRecord } from "./Common";
 
 const fitViewOptions: FitViewOptions = {
     padding: 0.2
@@ -35,9 +37,10 @@ function VisualisationContent() {
     const [websiteRecords, setWebsiteRecords] = React.useState<WebsiteRecordForSelect[]>([]);
     const [selectedNode, setSelectedNode] = React.useState<Node | null>(null);
     const [graphView, setGraphView] = React.useState("website");
+    const [editModalOpen, setEditModalOpen] = React.useState(false);
+    const [editedRecord, setEditedRecord] = React.useState<WebsiteRecord>(emptyWebsiteRecord());
     const [nodes, setNodes] = React.useState<Node[]>([]);
     const [edges, setEdges] = React.useState<Edge[]>([]);
-
 
     const manager = React.useMemo(() => new ApiManager(), []);
 
@@ -99,6 +102,21 @@ function VisualisationContent() {
         setSelectedNode(node);
     }, [setSelectedNode]);
 
+    const handleCloseEditModal = (editedRecord: number | null) => {
+        setEditModalOpen(false);
+        if (editedRecord !== null) {
+            // notify("success", "Record was successfully saved.");
+            // getRows(rowsPerPage, page, labelFilter, tagsFilter, urlFilter, order, orderBy);
+        }
+    }
+
+    const handleCreateWebsiteRecord = React.useCallback(() => {
+        const newRecord = emptyWebsiteRecord();
+        newRecord.url = selectedNode?.data.url;
+        setEditedRecord(newRecord);
+        setEditModalOpen(true);
+    }, [setEditedRecord, setEditModalOpen, selectedNode]);
+
     return (
         <Box sx={{ display: 'flex' }}>
             <Box
@@ -111,6 +129,7 @@ function VisualisationContent() {
                 }}
             >
                 <Container maxWidth={false} sx={{ mt: 2, mb: 2, minWidth: 800, maxWidth: 1600 }}>
+                    {editModalOpen && <NewSiteModal handleClose={handleCloseEditModal} record={editedRecord} />}
                     <Toolbar
                         sx={{
                             pl: { sm: 2 },
@@ -203,8 +222,12 @@ function VisualisationContent() {
                                                     </React.Fragment>
                                                 )}
                                                 {(selectedNode.data.crawlTime && selectedNode.data.crawlTime.trim() !== "")
-                                                    ? <Button variant="contained" >Crawl {websiteRecords.filter(rec => rec.pk === websiteRecordFilter).join()} again</Button>
-                                                    : <Button variant="contained">Create new website record</Button>}
+                                                    ? <Button variant="contained" >
+                                                        Crawl {websiteRecords.filter(rec => rec.pk === websiteRecordFilter).map(rec => rec.label).join()} now
+                                                    </Button>
+                                                    : <Button variant="contained" onClick={handleCreateWebsiteRecord}>
+                                                        Create new website record
+                                                    </Button>}
                                             </React.Fragment>
                                         ) : (<Typography variant="body1">No selected item</Typography>)}
                                 </Stack>

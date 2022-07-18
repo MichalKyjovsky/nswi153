@@ -13,7 +13,7 @@ from .models import *
 
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
-from tasks.crawler import manage_tasks
+from ..tasks.crawler import manage_tasks, start_periodic_task, stop_periodic_task
 from tasks.transformer import get_graph as transformer_get_graph
 
 status_mapper = {
@@ -348,7 +348,8 @@ def get_records(request, page):
     response_dict = add_execution_details(response_dict)
     sort_property, is_ascending = get_sort_details(request)
     if sort_property is not None and sort_property != 'last_crawl':
-        response_dict['records'].sort(key=lambda a: a['fields'].__getitem__(sort_property).lower(), reverse=is_ascending)
+        response_dict['records'].sort(key=lambda a: a['fields'].__getitem__(sort_property).lower(),
+                                      reverse=is_ascending)
     elif sort_property == 'last_crawl':
         response_dict['records'].sort(key=lambda a: a.__getitem__(sort_property), reverse=is_ascending)
     return Response(response_dict, status=status.HTTP_200_OK)
@@ -541,12 +542,16 @@ def get_execution(request, record, page):
     tags=['Execution'])
 @api_view(['POST'])
 def start_execution(request, record):
-    # Get record id from
-    # TODO: Get the ID from path param
-    if WebsiteRecord.objects.filter().exists():
-        # TODO: Sanitize data
+    # Get the ID from path param
+    try:
+        record_id = int(record)
+    except ValueError:
+        return Response({"error": f"Invalid Website Record ID {record}: an integer expect!"},
+                        status=status.HTTP_400_BAD_REQUEST)
+    record_rs = WebsiteRecord.objects.filter(id=record_id)
+    if record_rs.exists():
         # Run crawling
-        task = manage_tasks(WebsiteRecord.objects.get(request.body['id']))
+        task = manage_tasks(record_rs)
 
         return Response({"message": "Task started.",
                          "taskId": task},
@@ -680,6 +685,7 @@ def delete_record(request):
             return Response({"error": "Invalid record ID for deleting entered!"}, status=status.HTTP_400_BAD_REQUEST)
         record = WebsiteRecord.objects.filter(id=record_id)
         if record:
+            stop_periodic_task(record)
             record.delete()
             return Response({"message": "Record deleted successfully!"}, status=status.HTTP_200_OK)
         return Response({"error": "Could not find and delete selected record."}, status=status.HTTP_400_BAD_REQUEST)
@@ -727,7 +733,6 @@ def update_record(request):
 
         # Run crawling
         task = manage_tasks(WebsiteRecord.objects.get(pk=data['id']), True)
-
 
         return Response({"message": f"Record was updated successfully!",
                          "taskId": task}, status=status.HTTP_204_NO_CONTENT)
@@ -859,12 +864,20 @@ def do_activation(record, value, log):
     except ValueError:
         return Response({"error": f"Invalid Website Record ID {record}: an integer expect!"},
                         status=status.HTTP_400_BAD_REQUEST)
-    record = WebsiteRecord.objects.filter(id=record_id)
+    record = WebsiteRecord.objects.filter(id=record_id).first()
     if len(record) < 1:
         return Response({"error": f"Website Record with ID {record_id} was not found! The record was not {log}."},
                         status=status.HTTP_400_BAD_REQUEST)
-    record = record[0]
-    record.active = value
+    record.active = True if value == 'True' else False
+    try:
+        if record.active:
+            start_periodic_task(record)
+        else:
+            stop_periodic_task(record)
+    except Exception:
+        return Response({"error": f"Invalid Website Record ID {record}: or Celery exception."},
+                        status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    # If Celery crushed there is no point to save the action
     record.save()
     return Response({"message": f"Website Record with ID {record_id} was {log}."}, status=status.HTTP_200_OK)
 

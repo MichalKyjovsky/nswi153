@@ -17,7 +17,7 @@ def run_crawler_task(self, url: str, regex: str, record_id: int) -> None:
 
 def schedule_periodic_crawler_task(url: str, regex: str, record_id: int, interval: int) -> RedBeatSchedulerEntry:
     interval = celery.schedules.schedule(run_every=interval)  # seconds
-    entry = RedBeatSchedulerEntry(f'task:{url}', 'tasks.crawler.run_crawler_task', interval,
+    entry = RedBeatSchedulerEntry(f'task:{record_id}', 'tasks.crawler.run_crawler_task', interval,
                                   args=[url, regex, record_id], app=app)
     entry.save()
 
@@ -30,10 +30,21 @@ def manage_tasks(record: WebsiteRecord, reschedule: bool = False):
 
     if not reschedule:
         if record.interval:
+            record.job_id = f'redbeat:task:{record.id}'
             return schedule_periodic_crawler_task(record.url, record.regex, record.id, record.interval).key
         elif not record.interval:
             return run_crawler_task.delay(record.url, record.regex, record.id).id
     else:
         if record.interval:
-            RedBeatSchedulerEntry.from_key(f'readbeat:task{record.url}', app=app).delete()
+            RedBeatSchedulerEntry.from_key(record.job_id, app=app).delete()
             return schedule_periodic_crawler_task(record.url, record.regex, record.id, record.interval).key
+
+
+def stop_periodic_task(record: WebsiteRecord):
+    if record.job_id and record.interval:
+        RedBeatSchedulerEntry.from_key(record.job_id, app=app).delete()
+
+
+def start_periodic_task(record: WebsiteRecord):
+    if not record.job_id and record.interval:
+        schedule_periodic_crawler_task(record.url, record.regex, record.id, record.interval)

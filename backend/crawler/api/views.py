@@ -837,9 +837,12 @@ def update_tags(data) -> None:
         new_tags = set(data['tags'].split(','))  # a set of tags that we want to have associated at the end
 
         for tag in record.tag_set.all():
-            if tag.tag in new_tags:
+            tag_value = tag.tag.strip()
+            if len(tag_value) == 0:
+                continue
+            if tag_value in new_tags:
                 # preserved tag
-                new_tags.remove(tag.tag)  # remove from our consideration - was present, will be present
+                new_tags.remove(tag_value)  # remove from our consideration - was present, will be present
             else:
                 # removed tag
                 tag.delete()  # remove from DB

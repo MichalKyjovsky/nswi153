@@ -32,19 +32,27 @@ const textFieldStyle = {
     mb: 2
 };
 
+const urlRegex = /^(https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|www\.[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9]+\.[^\s]{2,}|www\.[a-zA-Z0-9]+\.[^\s]{2,})$/;
+const tagRegex = /^[A-Za-z0-9_-]+$/
+
 export interface EditSiteModalProps {
-    handleClose: (success: boolean) => void;
+    handleClose: (editedRecord: number | null) => void;
     record: WebsiteRecord;
 }
 
 export default function NewSiteModal(props: EditSiteModalProps) {
     const { handleClose, record } = props;
     const [url, setUrl] = React.useState(record.url);
+    const [urlError, setUrlError] = React.useState(false);
     const [label, setLabel] = React.useState(record.label);
+    const [labelError, setLabelError] = React.useState(false);
     const [interval, setInterval] = React.useState(toPeriodicityString(record.interval));
+    const [intervalError, setIntervalError] = React.useState(false);
     const [active, setActive] = React.useState(record.active);
     const [regex, setRegex] = React.useState(record.regex);
+    const [regexError, setRegexError] = React.useState(false);
     const [tags, setTags] = React.useState(record.tags);
+    const [tagError, setTagError] = React.useState(false);
     const [newTag, setNewTag] = React.useState('');
 
     const isEdit = record.pk !== undefined;
@@ -78,8 +86,13 @@ export default function NewSiteModal(props: EditSiteModalProps) {
     }
 
     const handleAddTag = () => {
-        setTags([...tags, newTag]);
-        setNewTag('');
+        if (tagRegex.test(newTag)) {
+            setTags([...tags, newTag]);
+            setNewTag('');
+            setTagError(false);
+        } else {
+            setTagError(true);
+        }
     }
 
     const handleTagKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -89,8 +102,46 @@ export default function NewSiteModal(props: EditSiteModalProps) {
         }
     }
 
+    const validate = () => {
+        let valid = true;
+        if (urlRegex.test(url)) {
+            setUrlError(false);
+        } else {
+            setUrlError(true);
+            valid = false;
+        }
+
+        if (label.trim().length > 0) {
+            setLabelError(false);
+        } else {
+            setLabelError(true);
+            valid = false;
+        }
+
+        try {
+            new RegExp(regex);
+            setRegexError(false);
+        } catch (e) {
+            setRegexError(true);
+            valid = false;
+        }
+
+        if (fromPeriodicityString(interval) !== null) {
+            setIntervalError(false);
+        } else {
+            setIntervalError(true);
+            valid = false;
+        }
+
+        return valid;
+    }
+
     const handleSave = async () => {
         // verify data are ok
+        if (!validate()) {
+            return;
+        }
+
         const inst = axios.create({
             baseURL: 'http://localhost:8000/api/',
             timeout: 10000
@@ -107,23 +158,26 @@ export default function NewSiteModal(props: EditSiteModalProps) {
         };
 
         try {
+            console.log(data);
+            let editedRecord = record.pk ? record.pk : null;
             if (isEdit) {
-                console.log("Updating this: ", JSON.stringify(data));
                 const response = await inst.post("record/", data);
                 if (response.status > 204) {
                     // show error
                     console.log(response);
                 }
             } else {
-                console.log("Inserting this: ", JSON.stringify(data));
                 const response = await inst.put("record/", data);
                 if (response.status > 201) {
                     // show error
                     console.log(response);
+                } else {
+                    editedRecord = response.data.pk;
+                    console.log("Added record pk: ", editedRecord);
                 }
             }
 
-            handleClose(true);
+            handleClose(editedRecord);
         } catch (error) {
             console.error(error);
         }
@@ -133,7 +187,7 @@ export default function NewSiteModal(props: EditSiteModalProps) {
         <Modal
             open={true}
 
-            onClose={handleClose}
+            onClose={() => handleClose(null)}
         >
             <Box sx={style}>
                 <Typography id="modal-modal-title" variant="h6" component="h2">
@@ -145,9 +199,11 @@ export default function NewSiteModal(props: EditSiteModalProps) {
                     label="URL"
                     placeholder="URL where the crawler should start"
                     fullWidth
+                    error={urlError}
                     sx={textFieldStyle}
                     value={url}
                     onChange={handleUrl}
+                    helperText={urlError ? "Enter a valid url" : undefined}
                 />
                 <TextField
                     required
@@ -155,9 +211,11 @@ export default function NewSiteModal(props: EditSiteModalProps) {
                     label="Label"
                     placeholder="Displayed label for this record"
                     fullWidth
+                    error={labelError}
                     sx={textFieldStyle}
                     value={label}
                     onChange={handleLabel}
+                    helperText={labelError ? "Label cannot be empty" : undefined}
                 />
                 <TextField
                     required
@@ -165,19 +223,23 @@ export default function NewSiteModal(props: EditSiteModalProps) {
                     label="Boundary RegExp"
                     placeholder="Found links must match this expression to be followed"
                     fullWidth
+                    error={regexError}
                     sx={textFieldStyle}
                     value={regex}
                     onChange={handleRegex}
+                    helperText={regexError ? "Specify a valid regular expression" : undefined}
                 />
                 <TextField
                     required
                     id="periodicity"
                     label="Periodicity"
-                    placeholder="Format: %d %h %m (e.g. '1d 2h 30m', '6h', '2h 30m')"
+                    placeholder="Format: %d %h %m %s (e.g. '1d 2h 30m', '6h', '10m 30s')"
                     fullWidth
+                    error={intervalError}
                     sx={textFieldStyle}
                     value={interval}
                     onChange={handleInterval}
+                    helperText={intervalError ? "Invalid periodicity format. Format: %d %h %m %s (e.g. '1d 2h 30m', '6h', '10m 30s')" : undefined}
                 />
                 <FormControlLabel control={
                     <Checkbox checked={active} onChange={handleActive} />
@@ -203,9 +265,11 @@ export default function NewSiteModal(props: EditSiteModalProps) {
                         id="tag"
                         label="Add a new tag"
                         sx={{ ...textFieldStyle, flexGrow: 1 }}
+                        error={tagError}
                         value={newTag}
                         onChange={handleNewTag}
                         onKeyPress={handleTagKeyPress}
+                        helperText={tagError ? "Tags can only contain big and small letters, numbers and '-' or '_'" : undefined}
                     />
                     <Button
                         variant="outlined"
@@ -218,7 +282,7 @@ export default function NewSiteModal(props: EditSiteModalProps) {
                 </Stack>
                 <Stack direction="row" spacing={2} justifyContent="flex-end">
                     <Button variant="contained" sx={{ backgroundColor: blue[500] }} startIcon={<SaveIcon />} onClick={handleSave}>Save</Button>
-                    <Button variant="contained" sx={{ backgroundColor: red[500] }} onClick={() => handleClose(false)}>Cancel</Button>
+                    <Button variant="contained" sx={{ backgroundColor: red[500] }} onClick={() => handleClose(null)}>Cancel</Button>
                 </Stack>
             </Box>
         </Modal>

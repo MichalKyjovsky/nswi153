@@ -25,7 +25,7 @@ const SitesToolbar = (props: SitesToolbarProps) => {
         >
             <Typography
                 sx={{ flex: '1 1 100%' }}
-                variant="h6"
+                variant="h5"
                 id="tableTitle"
                 component="h1"
                 color="primary"

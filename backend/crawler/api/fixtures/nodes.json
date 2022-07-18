@@ -7,9 +7,7 @@
       "label": "my_label",
       "interval": 120,
       "active": "True",
-      "regex": ".*",
-      "tags": [
-      ]
+      "regex": ".*"
     }
   },
   {
@@ -20,9 +18,7 @@
       "label": "amazon_crawl",
       "interval": 100,
       "active": "False",
-      "regex": "www.amazon.com.*",
-      "tags": [
-      ]
+      "regex": "www.amazon.com.*"
     }
   },
   {
@@ -30,7 +26,7 @@
     "pk": 1,
     "fields": {
       "title": "Node A",
-      "url": "www.com.foo.baz",
+      "url": "http://www.com.foo.baz",
       "crawl_time": "",
       "owner": 5
     }
@@ -40,7 +36,7 @@
     "pk": 2,
     "fields": {
       "title": "Node B",
-      "url": "www.com.foo.baz.sas",
+      "url": "http://www.com.foo.baz.sas",
       "crawl_time": "",
       "owner": 5
     }
@@ -50,7 +46,7 @@
     "pk": 3,
     "fields": {
       "title": "Node C",
-      "url": "www.com.sas",
+      "url": "http://www.com.sas",
       "crawl_time": "",
       "owner": 5
     }
@@ -60,7 +56,7 @@
     "pk": 4,
     "fields": {
       "title": "Node D",
-      "url": "www.sas.baz",
+      "url": "http://www.sas.baz",
       "crawl_time": "",
       "owner": 5
     }
@@ -69,18 +65,38 @@
     "model": "api.node",
     "pk": 5,
     "fields": {
-      "title": "Node E",
-      "url": "www.sas.com",
+      "title": "Node G",
+      "url": "http://www.sas.baz/site",
       "crawl_time": "",
-      "owner": 6
+      "owner": 5
     }
   },
   {
     "model": "api.node",
     "pk": 6,
     "fields": {
+      "title": "Node E",
+      "url": "http://www.sas.com",
+      "crawl_time": "",
+      "owner": 6
+    }
+  },
+  {
+    "model": "api.node",
+    "pk": 7,
+    "fields": {
       "title": "Node A",
-      "url": "www.com.foo.baz",
+      "url": "http://www.com.foo.baz",
+      "crawl_time": "",
+      "owner": 6
+    }
+  },
+  {
+    "model": "api.node",
+    "pk": 8,
+    "fields": {
+      "title": "Node A",
+      "url": "http://www.com.foo.baz/site",
       "crawl_time": "",
       "owner": 6
     }
@@ -106,6 +122,14 @@
     "pk": 3,
     "fields": {
       "source": 4,
+      "target": 2
+    }
+  },
+  {
+    "model": "api.edge",
+    "pk": 4,
+    "fields": {
+      "source": 5,
       "target": 2
     }
   }

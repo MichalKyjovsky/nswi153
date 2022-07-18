@@ -16,6 +16,7 @@ import { mainListItems } from './listItems';
 import { Route, Routes } from "react-router-dom";
 import Sites from "./Sites";
 import Executions from './Executions';
+import Visualisation from './Visualisation';
 
 const drawerWidth: number = 240;
 
@@ -154,6 +155,7 @@ function CoreLayout() {
               <Route path="/" element={<Sites />} />
               <Route path="/sites" element={<Sites />} />
               <Route path="/executions" element={<Executions />} />
+              <Route path="/visualisation" element={<Visualisation />} />
             </Routes>
           </Container>
         </Box>

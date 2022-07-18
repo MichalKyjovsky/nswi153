@@ -53,9 +53,9 @@ class WebsiteRecordManager(models.Manager):
         Updates a :class: `WebsiteRecord` instance.
         """
         dict_data = json.loads(json_data)
-        if 'id' not in dict_data.keys() or not dict_data['id'].isnumeric():
+        if 'id' not in dict_data.keys() or type(dict_data['id']) is not int:
             return False
-        record = WebsiteRecord.objects.filter(pk=int(dict_data['id']))
+        record = WebsiteRecord.objects.filter(pk=dict_data['id'])
         if len(record) < 1:
             return False
         record = record[0]
@@ -70,21 +70,67 @@ class WebsiteRecordManager(models.Manager):
         return True
 
 
+class NodeManager(models.Manager):
+    fields = ('title', 'url', 'crawl_time', 'owner')
+
+    def valid_node_data(self, data):
+        """
+        Helper function for verification of the data for adding a new :class: `Node`.
+
+        """
+        for field in data:
+            if field not in self.fields or data[field] is None:
+                return False
+
+            if 'boundary_record' in data.keys() and data['boundary_record'] not in [True, False]:
+                # invalid casting ValueError should be caught in the views.py
+                return False
+
+        return True
+
+    def create_node(self, dict_data: dict):
+        """
+        Creates a new :class: `Node` instance.
+        """
+        dict_data = {k: dict_data[k] for k in dict_data if k in self.fields}
+        if not self.valid_node_data(dict_data) or len(dict_data) != len(self.fields):
+            raise ValueError
+        return self.create(**dict_data)
+
+
+class EdgeManager(models.Manager):
+    fields = ('source', 'target')
+
+    def valid_edge_data(self, data):
+        """
+        Helper function for verification of the data for adding a new :class: `Edge`.
+
+        """
+        for field in data:
+            if field not in self.fields or data[field] is None:
+                return False
+
+        return True
+
+    def create_edge(self, dict_data: dict):
+        """
+        Creates a new :class: `Edge` instance.
+        """
+        print(dict_data)
+        dict_data = {k: dict_data[k] for k in dict_data if k in self.fields}
+        if not self.valid_edge_data(dict_data) or len(dict_data) != len(self.fields):
+            print(dict_data)
+            print(self.valid_edge_data(dict_data))
+            raise ValueError
+        return self.create(**dict_data)
+
+
 class TagManager(models.Manager):
-    def create_tag(self, tag):
+    def create_tag(self, record, tag):
         """
         Creates a new :class: `Tag` instance.
         """
-        return self.create(tag=tag)
-
-
-class Tag(models.Model):
-    """
-    Represents a single :class: `WebsiteRecord` tag.
-    """
-    tag = models.CharField(max_length=64)
-
-    objects = TagManager()
+        return self.create(website_record=record, tag=tag)
 
 
 class WebsiteRecord(models.Model):
@@ -100,9 +146,19 @@ class WebsiteRecord(models.Model):
     interval = models.IntegerField()
     active = models.BooleanField(default=False)
     regex = models.CharField(max_length=128)
-    tags = models.ManyToManyField(Tag)
+    job_id = models.CharField(max_length=128, null=True)
 
     objects = WebsiteRecordManager()
+
+
+class Tag(models.Model):
+    """
+    Represents a single :class: `WebsiteRecord` tag.
+    """
+    tag = models.CharField(max_length=64)
+    website_record = models.ForeignKey(WebsiteRecord, on_delete=models.CASCADE)
+
+    objects = TagManager()
 
 
 class Execution(models.Model):
@@ -136,8 +192,11 @@ class Node(models.Model):
     """
     title = models.CharField(max_length=2048, null=True)
     crawl_time = models.CharField(max_length=2048)
+    boundary_record = models.BooleanField(default=False)
     url = models.CharField(max_length=2048)
     owner = models.ForeignKey(WebsiteRecord, on_delete=models.CASCADE)
+
+    objects = NodeManager()
 
 
 class Edge(models.Model):
@@ -146,3 +205,5 @@ class Edge(models.Model):
     """
     source = models.ForeignKey(Node, on_delete=models.CASCADE, related_name='source_node')
     target = models.ForeignKey(Node, on_delete=models.CASCADE, related_name='target_node')
+
+    objects = EdgeManager()

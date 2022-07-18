@@ -11,6 +11,8 @@ from .models import *
 
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
+from tasks.crawler import manage_tasks, start_periodic_task, stop_periodic_task
+from tasks.transformer import get_graph as transformer_get_graph
 
 status_mapper = {
     1: "IN PROGRESS",
@@ -21,13 +23,17 @@ status_mapper = {
 }
 
 OPTIONAL_CLAUSE = "Several filters can be used at the same time."
-SEE_ERROR = 'See the "error" key in the response for details.'
+SEE_ERROR = 'See the "error" key in the response body for details.'
 
 
 @swagger_auto_schema(
     methods=['get'],
     operation_description='Returns an execution graph for the selected record. Not implemented yet.',
     manual_parameters=[
+        openapi.Parameter('mode', openapi.IN_PATH,
+                          "Mode in which the graf should be displayed. i.e., website or domain ",
+                          type=openapi.TYPE_STRING,
+                          required=True),
         openapi.Parameter('record', openapi.IN_QUERY,
                           "IDd of the record whose graph we want to receive, "
                           + "concatenated by a comma without a whitespace.",
@@ -68,21 +74,24 @@ SEE_ERROR = 'See the "error" key in the response for details.'
                 }
             ]
         }}),
-        400: openapi.Response('List of queried Website Record IDs was either not present or they were not integers.')
+        400: openapi.Response('List of queried Website Record IDs was either not present or they were not integers. '
+                              + SEE_ERROR)
     },
     tags=['Graph'])
 @api_view(['GET'])
-def get_graph(request):
+def get_graph(request, mode):
     """
     Returns an execution graph for the selected record.
+    @param mode: mode of the graph - either 'domain' or 'website' (if non-domain string, 'website' is assumed)
     @param request: the request that for routed to this API endpoint
     @return: the request response
     """
-    if 'records' not in request.query_params:
+    if 'record' not in request.query_params:
         return Response({"error": f"The Website Record ID(s) query parameter was not found!"},
                         status=status.HTTP_400_BAD_REQUEST)
-    records = request.query_params.get('records').split(',')
+    records = request.query_params.get('record').split(',')
     record_ids = []
+    domain_flag = mode == 'domain'
     for record in records:
         if not record.isnumeric():
             return Response({"error": f"The Website Record ID {record} is not an integer!"},
@@ -90,11 +99,7 @@ def get_graph(request):
         record_ids.append(int(record))
     edges = Edge.objects.select_related().filter(Q(source__owner__in=record_ids) | Q(target__owner__in=record_ids))
     nodes = Node.objects.filter(owner__in=record_ids)
-    json_serializer = serializers.get_serializer("json")
-    serializer = json_serializer()
-    serialized_edges = json.loads(serializer.serialize(edges))
-    serialized_nodes = json.loads(serializer.serialize(nodes))
-    output = {"nodes": serialized_nodes, "edges": serialized_edges}
+    output = transformer_get_graph(edges, nodes, domain_flag)
     return Response(data=output, status=status.HTTP_200_OK)
 
 
@@ -126,12 +131,13 @@ def get_graph(request):
             }
         ]}),
         400: openapi.Response(
-            "Invalid request! The request must contain the 'record' key with ID specified as a numeric value."),
-        404: openapi.Response('Record with ID {record_id} was not found!')
+            "Invalid request! The request must contain the 'record' key with ID specified as a numeric value. "
+            + SEE_ERROR),
+        404: openapi.Response('Record with ID {record_id} was not found! ' + SEE_ERROR)
     },
     tags=['Website Record'])
 @swagger_auto_schema(
-    method='put',
+    method='post',
     operation_description='Adds a new `WebsiteRecord` to the database.',
     request_body=openapi.Schema(
         type=openapi.TYPE_OBJECT,
@@ -160,12 +166,16 @@ def get_graph(request):
                                    example="awesome,crawl,quick")
         }),
     responses={
-        201: openapi.Response('Record was created successfully.'),
+        201: openapi.Response('Record was created successfully. Includes ID of the new record under key "pk".',
+                              examples={"application/json": {
+                                  'message': 'Record and its tags created successfully! (1 record, 3 tags)',
+                                  'pk': 1
+                              }}),
         400: openapi.Response('When invalid record data was provided. ' + SEE_ERROR)
     },
     tags=['Website Record'])
 @swagger_auto_schema(
-    method='post',
+    method='put',
     operation_description='Updates details of a `WebsiteRecord` in the database.',
     request_body=openapi.Schema(
         type=openapi.TYPE_OBJECT,
@@ -198,7 +208,7 @@ def get_graph(request):
         }),
     responses={
         204: openapi.Response('Record was updated successfully!'),
-        400: openapi.Response('Invalid data! Record was not updated.'),
+        400: openapi.Response('Invalid data! Record was not updated. ' + SEE_ERROR),
     },
     tags=['Website Record'])
 @swagger_auto_schema(
@@ -227,7 +237,7 @@ def record_crud(request):
     """
     if request.method == 'GET':
         return get_record(request)
-    if request.method == 'POST':
+    if request.method == 'PUT':
         return update_record(request)
     if request.method == 'DELETE':
         return delete_record(request)
@@ -336,7 +346,8 @@ def get_records(request, page):
     response_dict = add_execution_details(response_dict)
     sort_property, is_ascending = get_sort_details(request)
     if sort_property is not None and sort_property != 'last_crawl':
-        response_dict['records'].sort(key=lambda a: a['fields'].__getitem__(sort_property), reverse=is_ascending)
+        response_dict['records'].sort(key=lambda a: a['fields'].__getitem__(sort_property).lower(),
+                                      reverse=is_ascending)
     elif sort_property == 'last_crawl':
         response_dict['records'].sort(key=lambda a: a.__getitem__(sort_property), reverse=is_ascending)
     return Response(response_dict, status=status.HTTP_200_OK)
@@ -521,17 +532,35 @@ def get_execution(request, record, page):
 
 @swagger_auto_schema(
     methods=['POST'],
-    operation_description='Starts and crawler execution of a specified `WebsiteRecord`.',
+    operation_description='Starts crawler execution of a specified `WebsiteRecord`.',
     responses={
         200: openapi.Response('Crawling has started or it was placed in a queue. No body.'),
-        400: openapi.Response('The `WebsiteRecord` ID was not present or is invalid.')
+        400: openapi.Response('The `WebsiteRecord` ID was not present or is invalid. ' + SEE_ERROR)
     },
-    tags=['Website Record'])
+    tags=['Execution'])
 @api_view(['POST'])
-def start_execution(request):
-    # TODO: MichalKyjovsky -> get parameter from request body and call celery/something to start?
-    #  Or is it the same as celery endpoint?
-    pass
+def start_execution(request, record):
+    # Get the ID from path param
+    try:
+        record_id = int(record)
+    except ValueError:
+        return Response({"error": f"Invalid Website Record ID {record}: an integer expect!"},
+                        status=status.HTTP_400_BAD_REQUEST)
+    record_rs = WebsiteRecord.objects.filter(pk=record_id)
+    if record_rs.exists():
+        # Run crawling
+        try:
+            task = manage_tasks(record_rs)
+
+        except Exception:
+            return Response({"error": "Celery server crashed processing the request!"},
+                            status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        return Response({"message": "Task started.",
+                         "taskId": task},
+                        status=status.HTTP_201_CREATED)
+    else:
+        return Response({"error": "Invalid record parameters entered!"}, status=status.HTTP_400_BAD_REQUEST)
 
 
 @swagger_auto_schema(
@@ -564,68 +593,6 @@ def list_records(request):
     return Response(data=json_data, status=status.HTTP_200_OK)
 
 
-@swagger_auto_schema(
-    methods=['put'],
-    operation_description="Activates the specified `WebsiteRecord`.",
-    manual_parameters=[
-        openapi.Parameter('record', openapi.IN_PATH, "The ID of the record to be activated",
-                          type=openapi.TYPE_INTEGER,
-                          required=True,
-                          example=69),
-    ],
-    responses={
-        200: openapi.Response('The specified `WebsiteRecord` was activated.'),
-        400: openapi.Response('Invalid Record ID provided. ' + SEE_ERROR)
-    },
-    tags=['Website Record'])
-@api_view(['PUT'])
-def activate(request, record):
-    """
-    Activates a :class: `WebsiteRecord`.
-    @param request: the request that for routed to this API endpoint
-    @param record: the ID of the record to be activated
-    @return: the request response
-    """
-    return do_activation(record, True, "activated")
-
-
-@swagger_auto_schema(
-    methods=['put'],
-    operation_description="Deactivates the specified `WebsiteRecord`.",
-    manual_parameters=[
-        openapi.Parameter('record', openapi.IN_PATH, "The ID of the record to be deactivated",
-                          type=openapi.TYPE_INTEGER,
-                          required=True,
-                          example=69),
-    ],
-    responses={
-        200: openapi.Response('The specified `WebsiteRecord` was deactivated.'),
-        400: openapi.Response('Invalid Record ID provided. ' + SEE_ERROR)
-    },
-    tags=['Website Record'])
-@api_view(['PUT'])
-def deactivate(request, record):
-    """
-    Deactivates a :class: `WebsiteRecord`.
-    @param request: the request that for routed to this API endpoint
-    @param record: the record to be deactivated
-    @return: the request response
-    """
-    return do_activation(record, False, "deactivated")
-
-
-@swagger_auto_schema(
-    methods=['POST'],
-    operation_description="Runs a celery process.",
-    responses={
-        200: openapi.Response('The celery process was run.'),
-    },
-    tags=['Celery'])
-@api_view(['POST'])
-def run_celery(quest):
-    # TODO: to be implemented by @mkyjovsky including docs and tests
-    pass
-
 
 ########################################################
 # WebsiteRecord CRUD operations
@@ -641,15 +608,23 @@ def add_record(request):
         record = WebsiteRecord.objects.create_record(json_data)
         tags = []
         if 'tags' in request.data:
-            tags = [Tag.objects.create_tag(tag.strip()) for tag in request.data['tags'].split(',')]
-        with transaction.atomic():
-            # atomic to preserve consistency
-            record.save()
-            for tag in tags:
-                record.tags.add(tag)
-                tag.save()
+            tags = [Tag.objects.create_tag(record, tag.strip()) for tag in request.data['tags'].split(',')]
+            with transaction.atomic():
+                # atomic to preserve consistency
+                record.save()
+                for tag in tags:
+                    if len(tag.tag.strip()) > 0:  # non-empty string
+                        tag.save()
 
-        return Response({"message": f"Record and its tags created successfully! (1 record, {len(tags)} tags)"},
+        # Run crawling
+        try:
+            task = manage_tasks(record)
+        except Execution:
+            return Response({"error": "Celery server crashed processing the request!"},
+                            status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        return Response({"message": f"Record and its tags created successfully! (1 record, {len(tags)} tags)",
+                         "taskId": task},
                         status=status.HTTP_201_CREATED)
     except (ValueError, DatabaseError, IntegrityError, transaction.TransactionManagementError):
         return Response({"error": "Invalid record parameters entered!"}, status=status.HTTP_400_BAD_REQUEST)
@@ -666,8 +641,9 @@ def delete_record(request):
             record_id = int(request.data['record_id'])
         except ValueError:
             return Response({"error": "Invalid record ID for deleting entered!"}, status=status.HTTP_400_BAD_REQUEST)
-        record = WebsiteRecord.objects.filter(id=record_id)
+        record = WebsiteRecord.objects.filter(pk=record_id)
         if record:
+            stop_periodic_task(record)
             record.delete()
             return Response({"message": "Record deleted successfully!"}, status=status.HTTP_200_OK)
         return Response({"error": "Could not find and delete selected record."}, status=status.HTTP_400_BAD_REQUEST)
@@ -705,10 +681,23 @@ def update_record(request):
     @param request: the request that for routed to this API endpoint
     @return: the request response
     """
-    json_data = json.dumps(request.data)
+    json_data = request.body.decode('utf-8')
     if WebsiteRecord.objects.update_record(json_data):
         update_tags(request.data)
-        return Response({"message": f"Record was updated successfully!"}, status=status.HTTP_204_NO_CONTENT)
+
+        # Would not get here if ID not present
+        # OPTIONAL: Figure something better
+        data = json.loads(json_data)
+
+        # Run crawling
+        try:
+            task = manage_tasks(WebsiteRecord.objects.get(id=data['id']), True)
+        except Exception:
+            return Response({"error": "Celery server crashed processing the request!"},
+                            status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        return Response({"message": f"Record was updated successfully!",
+                         "taskId": task}, status=status.HTTP_204_NO_CONTENT)
     return Response({"error": "Invalid data! Record was not updated."}, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -768,7 +757,7 @@ def load_and_filter_records(request):
 
     if 'tag-filter' in request.query_params and request.query_params.get('tag-filter') is not None:
         records = [record for record in records if
-                   has_tag(record.tags.all(), request.query_params.get('tag-filter'))]
+                   has_tag(record.tag_set.all(), request.query_params.get('tag-filter'))]
 
     return records
 
@@ -784,7 +773,7 @@ def get_tags(records):
     for record in records:
         record_id = record.pk
         record_list = []
-        for tag in record.tags.all():
+        for tag in record.tag_set.all():
             record_list.append(tag.tag)
         record_tags[record_id] = record_list
 
@@ -821,31 +810,7 @@ def add_tags(response_dict, record_tags):
         pk = model['pk']
         if pk in record_tags:
             model['tags'] = record_tags[pk]
-        del model['fields']['tags']
     return response_dict
-
-
-def do_activation(record, value, log):
-    """
-    Performs a (de) activation of a :class: `WebsiteRecord`.
-    @param record: record to be activated
-    @param value: expected boolean value (True for activation, False for deactivation)
-    @param log: log message
-    @return: response to the request
-    """
-    try:
-        record_id = int(record)
-    except ValueError:
-        return Response({"error": f"Invalid Website Record ID {record}: an integer expect!"},
-                        status=status.HTTP_400_BAD_REQUEST)
-    record = WebsiteRecord.objects.filter(id=record_id)
-    if len(record) < 1:
-        return Response({"error": f"Website Record with ID {record_id} was not found! The record was not {log}."},
-                        status=status.HTTP_400_BAD_REQUEST)
-    record = record[0]
-    record.active = value
-    record.save()
-    return Response({"message": f"Website Record with ID {record_id} was {log}."}, status=status.HTTP_200_OK)
 
 
 def map_execution_status(executions):
@@ -871,21 +836,20 @@ def update_tags(data) -> None:
         record = WebsiteRecord.objects.select_related().filter(pk=data['id'])[0]  # get record and its tags
         new_tags = set(data['tags'].split(','))  # a set of tags that we want to have associated at the end
 
-        for tag in record.tags.all():
+        for tag in record.tag_set.all():
             if tag.tag in new_tags:
                 # preserved tag
                 new_tags.remove(tag.tag)  # remove from our consideration - was present, will be present
             else:
                 # removed tag
-                record.tags.remove(tag)  # remove reference from WebsiteRecord
                 tag.delete()  # remove from DB
 
         created_tags = []
         for tag in new_tags:
             # added tag
-            added_tag = Tag.objects.create_tag(tag.strip())
+            added_tag = Tag.objects.create_tag(record, tag.strip())
             created_tags.append(added_tag)  # add to list for later save operation
-            record.tags.add(added_tag)  # add new tag
+            record.tag_set.add(added_tag)  # add new tag
 
         with transaction.atomic():
             # atomic to preserve consistency

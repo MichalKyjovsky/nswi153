@@ -98,7 +98,8 @@ celerybeat-schedule.*
 
 # Environments 
 .env 
-.venv 
+.env/*
+.venv
 env/ 
 venv/ 
 ENV/ 
@@ -141,3 +142,5 @@ GitHub.sublime-settings
 
 # SQLite
 *.sqlite
+
+migrations/

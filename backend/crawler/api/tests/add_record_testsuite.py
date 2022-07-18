@@ -1,7 +1,6 @@
 from django.test import TestCase
 from api.models import WebsiteRecord, Tag
 
-
 request_url = '/api/record/'
 content_type = "application/json"
 
@@ -16,7 +15,7 @@ class AddRecordTest(TestCase):
         assert 'message' in response.data
         assert len(WebsiteRecord.objects.filter(label='test')) > 0
         record = WebsiteRecord.objects.filter(label='test').first()
-        assert len(Tag.objects.filter(websiterecord=record)) == 3
+        assert len(Tag.objects.filter(website_record=record)) == 3
 
     def test_add_valid_record_no_tags(self):
         request_data = {"url": "www.google.com", "label": "test", "interval": 120, "active": False, "regex": ".+"}
@@ -24,7 +23,7 @@ class AddRecordTest(TestCase):
         assert 'message' in response.data
         assert len(WebsiteRecord.objects.filter(label='test')) > 0
         record = WebsiteRecord.objects.filter(label='test')[0]
-        assert len(Tag.objects.filter(websiterecord=record)) == 0
+        assert len(Tag.objects.filter(website_record=record)) == 0
 
     def test_add_invalid_record_label(self):
         request_data = {"url": "www.google.com", "label": "", "interval": 120, "active": False, "regex": ".+",

@@ -546,7 +546,7 @@ def start_execution(request, record):
     except ValueError:
         return Response({"error": f"Invalid Website Record ID {record}: an integer expect!"},
                         status=status.HTTP_400_BAD_REQUEST)
-    record_rs = WebsiteRecord.objects.filter(id=record_id)
+    record_rs = WebsiteRecord.objects.filter(pk=record_id)
     if record_rs.exists():
         # Run crawling
         task = manage_tasks(record_rs)
@@ -588,7 +588,6 @@ def list_records(request):
     return Response(data=json_data, status=status.HTTP_200_OK)
 
 
-
 ########################################################
 # WebsiteRecord CRUD operations
 
@@ -612,7 +611,11 @@ def add_record(request):
                         tag.save()
 
         # Run crawling
-        task = manage_tasks(record)
+        try:
+            task = manage_tasks(record)
+        except Execution:
+            return Response({"error": "Celery server crashed processing the request!"},
+                            status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         return Response({"message": f"Record and its tags created successfully! (1 record, {len(tags)} tags)",
                          "taskId": task},
@@ -632,7 +635,7 @@ def delete_record(request):
             record_id = int(request.data['record_id'])
         except ValueError:
             return Response({"error": "Invalid record ID for deleting entered!"}, status=status.HTTP_400_BAD_REQUEST)
-        record = WebsiteRecord.objects.filter(id=record_id)
+        record = WebsiteRecord.objects.filter(pk=record_id)
         if record:
             stop_periodic_task(record)
             record.delete()

@@ -32,43 +32,58 @@ def get_graph(raw_edges: list, raw_nodes: list, domain: bool = True):
         seen = set()
         edges = []
 
+        url_to_id_mapper = dict()
+        id_mapper = 1
+
         # Make nodes and edges unique
         for edge in edges_preprocessed:
             if (edge['source']['url'], edge['target']['url']) not in seen:
                 seen.add((edge['source']['url'], edge['target']['url']))
                 edges.append(edge)
+                # create map of url -> ID from 1
+                if edge['source']['url'] not in url_to_id_mapper:
+                    url_to_id_mapper[edge['source']['url']] = id_mapper
+                    id_mapper += 1
+                if edge['target']['url'] not in url_to_id_mapper:
+                    url_to_id_mapper[edge['target']['url']] = id_mapper
+                    id_mapper += 1
 
         serialized_nodes = []
         serialized_edges = []
 
-        pk = 0
-
+        added_nodes = set()
         for i in range(len(edges)):
-            serialized_nodes.append(
-                {
-                    'model': 'api.node',
-                    'pk': pk,
-                    'fields': edges[i]['source']
-                }
-            )
-            serialized_nodes.append(
-                {
-                    'model': 'api.node',
-                    'pk': pk + 1,
-                    'fields': edges[i]['target']
-                }
-            )
+            source_id = url_to_id_mapper[edges[i]['source']['url']]
+            target_id = url_to_id_mapper[edges[i]['target']['url']]
+            # add every node EXACTLY once
+            if source_id not in added_nodes:
+                serialized_nodes.append(
+                    {
+                        'model': 'api.node',
+                        'pk': source_id,
+                        'fields': edges[i]['source']
+                    }
+                )
+                added_nodes.add(source_id)
+            if target_id not in added_nodes:
+                serialized_nodes.append(
+                    {
+                        'model': 'api.node',
+                        'pk': target_id,
+                        'fields': edges[i]['target']
+                    }
+                )
+                added_nodes.add(target_id)
             serialized_edges.append(
                 {
                     'model': 'api.edge',
                     'pk': i,
                     'fields': {
-                        'source': i,
-                        'target': i + 1
+                        'source': source_id,
+                        'target': target_id
                     }
                 }
             )
-            pk += 2
 
     else:
         nodes_filtered = raw_nodes

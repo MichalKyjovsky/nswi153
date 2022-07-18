@@ -11,7 +11,7 @@ class GetRecordTest(TestCase):
         assert len(response.data) == 1
         assert response.data[0]['fields']['label'] == 'my_label'
         assert len(response.data[0]['fields']['tags']) == 3
-        assert 'b' in response.data[0]['fields']['tags']
+        assert '3' in response.data[0]['fields']['tags']
 
     def test_get_invalid_record(self):
         response = self.client.get('/api/record/?record=666')

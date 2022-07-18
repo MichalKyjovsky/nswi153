@@ -134,7 +134,7 @@ def get_graph(request, mode):
     },
     tags=['Website Record'])
 @swagger_auto_schema(
-    method='put',
+    method='post',
     operation_description='Adds a new `WebsiteRecord` to the database.',
     request_body=openapi.Schema(
         type=openapi.TYPE_OBJECT,
@@ -168,7 +168,7 @@ def get_graph(request, mode):
     },
     tags=['Website Record'])
 @swagger_auto_schema(
-    method='post',
+    method='put',
     operation_description='Updates details of a `WebsiteRecord` in the database.',
     request_body=openapi.Schema(
         type=openapi.TYPE_OBJECT,
@@ -529,11 +529,11 @@ def get_execution(request, record, page):
         200: openapi.Response('Crawling has started or it was placed in a queue. No body.'),
         400: openapi.Response('The `WebsiteRecord` ID was not present or is invalid.')
     },
-    tags=['Website Record'])
+    tags=['Execution'])
 @api_view(['POST'])
 def start_execution(request):
     # Get record id from
-
+    # TODO: Get the ID from path param
     if WebsiteRecord.objects.filter().exists():
         # TODO: Sanitize data
         task = manage_tasks(WebsiteRecord.objects.get(request.body['id']))

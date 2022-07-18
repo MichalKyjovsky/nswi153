@@ -6,4 +6,4 @@ set -o errexit
 set -o nounset
 
 rm -f './celerybeat.pid'
-celery -A crawler beat -l INFO --pool=solo -S redbeat.RedBeatScheduler
+celery -A crawler beat -l INFO -S redbeat.RedBeatScheduler

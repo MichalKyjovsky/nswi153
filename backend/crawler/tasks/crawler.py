@@ -8,16 +8,16 @@ from .transformer import transform_graph, persist_graph
 from crawler.celery import app
 
 
-@shared_task(name="Website Crawler")
-def run_crawler_task(url: str, regex: str, record_id: int) -> None:
+@app.task(bind=True)
+def run_crawler_task(self, url: str, regex: str, record_id: int) -> None:
     nodes = Inspector.crawl_url(url, regex)
     persist_graph(*transform_graph(nodes, record_id))
 
 
 def schedule_periodic_crawler_task(url: str, regex: str, record_id: int, interval: int) -> RedBeatSchedulerEntry:
     interval = celery.schedules.schedule(run_every=interval)  # seconds
-    entry = RedBeatSchedulerEntry(f'task:{url}', 'run_crawler_task', interval,
-                                  args=[url, regex, record_id])
+    entry = RedBeatSchedulerEntry(f'task:{url}', 'tasks.crawler.run_crawler_task', interval,
+                                  args=[url, regex, record_id], app=app)
     entry.save()
 
     return entry

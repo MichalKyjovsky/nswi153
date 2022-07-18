@@ -13,6 +13,8 @@ class AddRecordTest(TestCase):
                         "tags": "a,b,1"}
         response = self.client.post(request_url, data=request_data, content_type=content_type)
         assert 'message' in response.data
+        assert 'pk' in response.data
+        assert type(response.data['pk']) is int
         assert len(WebsiteRecord.objects.filter(label='test')) > 0
         record = WebsiteRecord.objects.filter(label='test').first()
         assert len(Tag.objects.filter(website_record=record)) == 3

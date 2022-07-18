@@ -18,6 +18,10 @@ import InputLabel from '@mui/material/InputLabel';
 import MenuItem from '@mui/material/MenuItem';
 import FormControl from '@mui/material/FormControl';
 import Select, { SelectChangeEvent } from '@mui/material/Select';
+import Radio from '@mui/material/Radio';
+import RadioGroup from '@mui/material/RadioGroup';
+import FormControlLabel from '@mui/material/FormControlLabel';
+import FormLabel from '@mui/material/FormLabel';
 import ApiManager, { WebsiteRecordForSelect } from './ApiManager';
 import GraphVisualizer from './GraphVisualizer';
 import { Button, Stack } from '@mui/material';
@@ -30,6 +34,10 @@ function VisualisationContent() {
     const [websiteRecordFilter, setWebsiteRecordFilter] = React.useState<number | undefined>(undefined);
     const [websiteRecords, setWebsiteRecords] = React.useState<WebsiteRecordForSelect[]>([]);
     const [selectedNode, setSelectedNode] = React.useState<Node | null>(null);
+    const [graphView, setGraphView] = React.useState("website");
+    const [nodes, setNodes] = React.useState<Node[]>([]);
+    const [edges, setEdges] = React.useState<Edge[]>([]);
+
 
     const manager = React.useMemo(() => new ApiManager(), []);
 
@@ -49,13 +57,14 @@ function VisualisationContent() {
         setWebsiteRecordFilter(value === undefined || value === noFilter ? undefined : Number(value));
     };
 
-    const [nodes, setNodes] = React.useState<Node[]>([]);
-    const [edges, setEdges] = React.useState<Edge[]>([]);
+    const handleGraphViewChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        setGraphView((event.target as HTMLInputElement).value);
+    };
 
-    const getGraph = React.useCallback(async (records: number | undefined) => {
+    const getGraph = React.useCallback(async (records: number | undefined, graphView: string) => {
         setSelectedNode(null);
         if (records !== undefined) {
-            const graph = await manager.getGraph(records.toString());
+            const graph = await manager.getGraph(records.toString(), graphView);
             if (graph !== null) {
                 const visualizer = new GraphVisualizer(graph);
                 visualizer.layout();
@@ -70,8 +79,8 @@ function VisualisationContent() {
     }, [setNodes, setEdges, manager]);
 
     React.useEffect(() => {
-        getGraph(websiteRecordFilter);
-    }, [getGraph, websiteRecordFilter]);
+        getGraph(websiteRecordFilter, graphView);
+    }, [getGraph, websiteRecordFilter, graphView]);
 
     const onNodesChange = React.useCallback(
         (changes: NodeChange[]) => setNodes((nds) => applyNodeChanges(changes, nds)),
@@ -117,6 +126,19 @@ function VisualisationContent() {
                         >
                             Visualisation
                         </Typography>
+                        <FormControl sx={{ ml: 2, mr: 2 }}>
+                            <FormLabel id="graph-view-radio-button">View mode</FormLabel>
+                            <RadioGroup
+                                row
+                                name="graph-view-radio-button-group"
+                                value={graphView}
+                                onChange={handleGraphViewChange}
+                                sx={{ minWidth: 300 }}
+                            >
+                                <FormControlLabel value="website" control={<Radio />} label="Website" />
+                                <FormControlLabel value="domain" control={<Radio />} label="Domain" />
+                            </RadioGroup>
+                        </FormControl>
                         <FormControl variant="standard" sx={{ m: 1, minWidth: 250 }}>
                             <InputLabel id="record-select-label">Website record filter</InputLabel>
                             <Select

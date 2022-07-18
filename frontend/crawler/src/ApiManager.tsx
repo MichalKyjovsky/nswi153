@@ -225,11 +225,11 @@ export default class ApiManager {
         }
     }
 
-    async getGraph(records: string): Promise<LayoutGraph | null> {
+    async getGraph(record: string, view: string): Promise<LayoutGraph | null> {
         try {
-            const response = await this.inst.get("graph/", {
+            const response = await this.inst.get(`graph/${view}/`, {
                 params: {
-                    records
+                    record
                 }
             });
             const data: GraphResponse = response.data;

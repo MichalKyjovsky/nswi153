@@ -137,9 +137,9 @@ function VisualisationContent() {
                             </Select>
                         </FormControl>
                     </Toolbar>
-                    <Container maxWidth={false} sx={{ mt: 2, mb: 2, minWidth: 800, maxWidth: 1600, height: 600, padding: 0 }}>
+                    <Container maxWidth={false} sx={{ mt: 2, mb: 2, minWidth: 800, maxWidth: 1600, height: 614, padding: 0 }}>
                         <div style={{ display: 'flex', height: '100%' }}>
-                            <div style={{ flex: '1 1 100%' }}>
+                            <div style={{ flex: '1 1 50%', border: '2px solid green', margin: 5 }}>
                                 <ReactFlow
                                     nodes={nodes}
                                     edges={edges}
@@ -151,7 +151,7 @@ function VisualisationContent() {
                                     fitViewOptions={fitViewOptions}
                                 />
                             </div>
-                            <div style={{ flexBasis: 'auto', width: 250 }}>
+                            <div style={{ flexBasis: 'auto', width: 250, margin: 5 }}>
                                 <Stack direction={'column'} spacing={1}>
                                     <Typography
                                         variant="h6"

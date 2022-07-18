@@ -16,9 +16,23 @@ import Typography from '@mui/material/Typography';
 import InputLabel from '@mui/material/InputLabel';
 import MenuItem from '@mui/material/MenuItem';
 import FormControl from '@mui/material/FormControl';
+import ExecutionIcon from '@mui/icons-material/Settings';
+import IconButton from '@mui/material/IconButton';
+import Tooltip from '@mui/material/Tooltip';
+import Snackbar from '@mui/material/Snackbar';
+import MuiAlert, { AlertProps } from '@mui/material/Alert';
 import Select, { SelectChangeEvent } from '@mui/material/Select';
-import { ExecutionRecord } from './Common';
+import { ExecutionRecord, toPeriodicityString } from './Common';
 import ApiManager, { WebsiteRecordForSelect } from './ApiManager';
+
+type Severity = "info" | "success" | "warning" | "error";
+
+const Alert = React.forwardRef<HTMLDivElement, AlertProps>(function Alert(
+    props,
+    ref,
+) {
+    return <MuiAlert elevation={6} ref={ref} variant="filled" {...props} />;
+});
 
 interface HeadCell {
     id: keyof ExecutionRecord;
@@ -53,6 +67,12 @@ const headCells: readonly HeadCell[] = [
         align: "left",
         label: 'Sites crawled',
     },
+    {
+        id: 'actions',
+        align: "left",
+        label: 'Actions',
+        width: 80
+    },
 ];
 
 function ExecutionsContent() {
@@ -62,8 +82,17 @@ function ExecutionsContent() {
     const [totalRecords, setTotalRecords] = React.useState(0);
     const [websiteRecordFilter, setWebsiteRecordFilter] = React.useState<number | undefined>(undefined);
     const [websiteRecords, setWebsiteRecords] = React.useState<WebsiteRecordForSelect[]>([]);
+    const [notificationOpen, setNotificationOpen] = React.useState(false);
+    const [notificationSeverity, setNotificationSeverity] = React.useState<Severity>("info");
+    const [notificationMessage, setNotificationMessage] = React.useState("");
 
     const manager = React.useMemo(() => new ApiManager(), []);
+
+    const notify = React.useCallback((severity: Severity, message: string) => {
+        setNotificationMessage(message);
+        setNotificationSeverity(severity);
+        setNotificationOpen(true);
+    }, [setNotificationOpen, setNotificationSeverity, setNotificationMessage]);
 
     const getRows = React.useCallback(async (pageSize: number, pageNumber: number, wrFilter?: number) => {
         const response = await manager.getExecutionPage(pageSize, pageNumber, wrFilter);
@@ -102,6 +131,22 @@ function ExecutionsContent() {
         const value = event.target.value;
         setWebsiteRecordFilter(value === undefined || value === noFilter ? undefined : Number(value));
         setPage(0);
+    };
+
+    const handleRecordExecuteClick = React.useCallback(async (id: number) => {
+        const success = await manager.executeRecord(id);
+        if (success) {
+            notify("info", "Execution has started.");
+        } else {
+            notify("error", "Failed to start the execution.");
+        }
+    }, [manager, notify]);
+
+    const handleNotificationClose = (event?: React.SyntheticEvent | Event, reason?: string) => {
+        if (reason === 'clickaway') {
+            return;
+        }
+        setNotificationOpen(false);
     };
 
     return (
@@ -177,8 +222,13 @@ function ExecutionsContent() {
                                             <TableCell>{row.websiteRecordLabel}</TableCell>
                                             <TableCell>{row.status}</TableCell>
                                             <TableCell>{row.lastExecutionTime}</TableCell>
-                                            <TableCell>{row.lastExecutionDuration}</TableCell>
+                                            <TableCell>{toPeriodicityString(row.lastExecutionDuration)}</TableCell>
                                             <TableCell>{row.sitesCrawled}</TableCell>
+                                            <TableCell>
+                                                <Tooltip title="Execute">
+                                                    <IconButton onClick={() => handleRecordExecuteClick(row.websiteRecordPk)}><ExecutionIcon /></IconButton>
+                                                </Tooltip>
+                                            </TableCell>
                                         </TableRow>
                                     );
                                 })}
@@ -208,6 +258,20 @@ function ExecutionsContent() {
                             </TableFooter>
                         </Table>
                     </TableContainer>
+                    <Snackbar
+                        open={notificationOpen}
+                        autoHideDuration={6000}
+                        onClose={handleNotificationClose}
+                        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+                    >
+                        <Alert
+                            onClose={handleNotificationClose}
+                            severity={notificationSeverity}
+                            sx={{ width: '100%' }}
+                        >
+                            {notificationMessage}
+                        </Alert>
+                    </Snackbar>
                 </Container>
             </Box>
         </Box>

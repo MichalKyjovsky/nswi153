@@ -85,7 +85,8 @@ export interface ExecutionRecord {
     status: string,
     lastExecutionTime: string,
     lastExecutionDuration: number,
-    sitesCrawled: number
+    sitesCrawled: number,
+    actions: boolean
 }
 
 export function createExecutionRecord(
@@ -104,7 +105,8 @@ export function createExecutionRecord(
         status,
         lastExecutionTime,
         lastExecutionDuration,
-        sitesCrawled
+        sitesCrawled,
+        actions: true
     };
 }
 
@@ -170,29 +172,39 @@ export function createLayoutGraph(nodes: LayoutNode[], edges: LayoutEdge[]): Lay
     };
 }
 
-const periodicityRegex = /^((\d+)d)?((\d+)h)?((\d+)m)?$/;
+const periodicityRegex = /^((\d+)d)?((\d+)h)?((\d+)m)?((\d+)s)?$/;
 
 export function toPeriodicityString(period: number): string {
     let remaining = period;
-    const days = (remaining / 1440) >> 0;
-    remaining %= 1440;
-    const hours = (remaining / 60) >> 0;
-    const minutes = remaining % 60;
-    return `${days}d ${hours}h ${minutes}m`;
+    const days = (remaining / 86400) >> 0;
+    remaining %= 86400;
+    const hours = (remaining / 3600) >> 0;
+    remaining %= 3600;
+    const minutes = (remaining / 60) >> 0;
+    const seconds = remaining % 60;
+    const result = (days > 0 ? `${days}d ` : "")
+        + (hours > 0 ? `${hours}h ` : "")
+        + (minutes > 0 ? `${minutes}m ` : "")
+        + (seconds > 0 ? `${seconds}s` : "");
+
+    return result !== "" ? result.trim() : "0s";
 };
 
 export function fromPeriodicityString(periodicity: string): number | null {
     const match = periodicityRegex.exec(periodicity.replace(/\s/g, ''));
-    if (match && (match[2] || match[4] || match[6])) {
+    if (match && (match[2] || match[4] || match[6] || match[8])) {
         let period: number = 0;
         if (match[2]) {
-            period += Number(match[2]) * 1440;
+            period += Number(match[2]) * 86400;
         }
         if (match[4]) {
-            period += Number(match[4]) * 60;
+            period += Number(match[4]) * 3600;
         }
         if (match[6]) {
-            period += Number(match[6]);
+            period += Number(match[6]) * 60;
+        }
+        if (match[8]) {
+            period += Number(match[8]);
         }
         return period;
     }

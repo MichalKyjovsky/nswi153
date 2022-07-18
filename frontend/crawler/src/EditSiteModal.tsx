@@ -36,7 +36,7 @@ const urlRegex = /^(https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0
 const tagRegex = /^[A-Za-z0-9_-]+$/
 
 export interface EditSiteModalProps {
-    handleClose: (success: boolean) => void;
+    handleClose: (editedRecord: number | null) => void;
     record: WebsiteRecord;
 }
 
@@ -86,7 +86,7 @@ export default function NewSiteModal(props: EditSiteModalProps) {
     }
 
     const handleAddTag = () => {
-        if (tagRegex.test(newTag) || true) {
+        if (tagRegex.test(newTag)) {
             setTags([...tags, newTag]);
             setNewTag('');
             setTagError(false);
@@ -159,6 +159,7 @@ export default function NewSiteModal(props: EditSiteModalProps) {
 
         try {
             console.log(data);
+            let editedRecord = record.pk ? record.pk : null;
             if (isEdit) {
                 const response = await inst.post("record/", data);
                 if (response.status > 204) {
@@ -170,10 +171,13 @@ export default function NewSiteModal(props: EditSiteModalProps) {
                 if (response.status > 201) {
                     // show error
                     console.log(response);
+                } else {
+                    editedRecord = response.data.pk;
+                    console.log("Added record pk: ", editedRecord);
                 }
             }
 
-            handleClose(true);
+            handleClose(editedRecord);
         } catch (error) {
             console.error(error);
         }
@@ -183,7 +187,7 @@ export default function NewSiteModal(props: EditSiteModalProps) {
         <Modal
             open={true}
 
-            onClose={handleClose}
+            onClose={() => handleClose(null)}
         >
             <Box sx={style}>
                 <Typography id="modal-modal-title" variant="h6" component="h2">
@@ -229,13 +233,13 @@ export default function NewSiteModal(props: EditSiteModalProps) {
                     required
                     id="periodicity"
                     label="Periodicity"
-                    placeholder="Format: %d %h %m (e.g. '1d 2h 30m', '6h', '2h 30m')"
+                    placeholder="Format: %d %h %m %s (e.g. '1d 2h 30m', '6h', '10m 30s')"
                     fullWidth
                     error={intervalError}
                     sx={textFieldStyle}
                     value={interval}
                     onChange={handleInterval}
-                    helperText={intervalError ? "Invalid periodicity format. Format: %d %h %m (e.g. '1d 2h 30m', '6h', '2h 30m')" : undefined}
+                    helperText={intervalError ? "Invalid periodicity format. Format: %d %h %m %s (e.g. '1d 2h 30m', '6h', '10m 30s')" : undefined}
                 />
                 <FormControlLabel control={
                     <Checkbox checked={active} onChange={handleActive} />
@@ -278,7 +282,7 @@ export default function NewSiteModal(props: EditSiteModalProps) {
                 </Stack>
                 <Stack direction="row" spacing={2} justifyContent="flex-end">
                     <Button variant="contained" sx={{ backgroundColor: blue[500] }} startIcon={<SaveIcon />} onClick={handleSave}>Save</Button>
-                    <Button variant="contained" sx={{ backgroundColor: red[500] }} onClick={() => handleClose(false)}>Cancel</Button>
+                    <Button variant="contained" sx={{ backgroundColor: red[500] }} onClick={() => handleClose(null)}>Cancel</Button>
                 </Stack>
             </Box>
         </Modal>

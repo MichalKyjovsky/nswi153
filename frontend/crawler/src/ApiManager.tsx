@@ -196,11 +196,33 @@ export default class ApiManager {
     }
 
     async deleteRecord(id: number) {
-        await this.inst.delete("record/", {
-            data: {
-                record_id: id
+        try {
+            const response = await this.inst.delete("record/", {
+                data: {
+                    record_id: id
+                }
+            });
+            if (response.status !== 200) {
+                return false;
             }
-        });
+            return true;
+        } catch (error) {
+            console.log(error);
+            return false;
+        }
+    }
+
+    async executeRecord(id: number) {
+        try {
+            const response = await this.inst.post(`execution/${id}/`);
+            if (response.status > 200) {
+                return false;
+            }
+            return true;
+        } catch (error) {
+            console.log(error);
+            return false;
+        }
     }
 
     async getGraph(records: string): Promise<LayoutGraph | null> {

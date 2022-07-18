@@ -22,6 +22,9 @@ import Radio from '@mui/material/Radio';
 import RadioGroup from '@mui/material/RadioGroup';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import FormLabel from '@mui/material/FormLabel';
+import Snackbar from '@mui/material/Snackbar';
+import MuiAlert, { AlertProps } from '@mui/material/Alert';
+import Switch from '@mui/material/Switch';
 import ApiManager, { WebsiteRecordForSelect } from './ApiManager';
 import GraphVisualizer from './GraphVisualizer';
 import { Button, Stack } from '@mui/material';
@@ -32,6 +35,15 @@ const fitViewOptions: FitViewOptions = {
     padding: 0.2
 }
 
+const Alert = React.forwardRef<HTMLDivElement, AlertProps>(function Alert(
+    props,
+    ref,
+) {
+    return <MuiAlert elevation={6} ref={ref} variant="filled" {...props} />;
+});
+
+type Severity = "info" | "success" | "warning" | "error";
+
 function VisualisationContent() {
     const [websiteRecordFilter, setWebsiteRecordFilter] = React.useState<number | undefined>(undefined);
     const [websiteRecords, setWebsiteRecords] = React.useState<WebsiteRecordForSelect[]>([]);
@@ -39,6 +51,12 @@ function VisualisationContent() {
     const [graphView, setGraphView] = React.useState("website");
     const [editModalOpen, setEditModalOpen] = React.useState(false);
     const [editedRecord, setEditedRecord] = React.useState<WebsiteRecord>(emptyWebsiteRecord());
+    const [notificationOpen, setNotificationOpen] = React.useState(false);
+    const [notificationSeverity, setNotificationSeverity] = React.useState<Severity>("info");
+    const [notificationMessage, setNotificationMessage] = React.useState("");
+    const [liveRefresh, setLiveRefresh] = React.useState(false);
+    const [liveRefreshProgress, setLiveRefreshProgress] = React.useState(0);
+    const [liveRefreshTimer, setLiveRefreshTimer] = React.useState<NodeJS.Timer | undefined>(undefined);
     const [nodes, setNodes] = React.useState<Node[]>([]);
     const [edges, setEdges] = React.useState<Edge[]>([]);
 
@@ -48,6 +66,12 @@ function VisualisationContent() {
         const response = await manager.listRecords();
         setWebsiteRecords(response ?? []);
     }, [manager]);
+
+    const notify = React.useCallback((severity: Severity, message: string) => {
+        setNotificationMessage(message);
+        setNotificationSeverity(severity);
+        setNotificationOpen(true);
+    }, [setNotificationOpen, setNotificationSeverity, setNotificationMessage]);
 
     const noFilter = -1;
 
@@ -105,8 +129,10 @@ function VisualisationContent() {
     const handleCloseEditModal = (editedRecord: number | null) => {
         setEditModalOpen(false);
         if (editedRecord !== null) {
-            // notify("success", "Record was successfully saved.");
-            // getRows(rowsPerPage, page, labelFilter, tagsFilter, urlFilter, order, orderBy);
+            notify("success", "Record was successfully saved.");
+            getRecords().then(() => {
+                setWebsiteRecordFilter(editedRecord);
+            });
         }
     }
 
@@ -116,6 +142,56 @@ function VisualisationContent() {
         setEditedRecord(newRecord);
         setEditModalOpen(true);
     }, [setEditedRecord, setEditModalOpen, selectedNode]);
+
+    const handleNotificationClose = (event?: React.SyntheticEvent | Event, reason?: string) => {
+        if (reason === 'clickaway') {
+            return;
+        }
+        setNotificationOpen(false);
+    };
+
+    const handleRecordExecuteClick = React.useCallback(async (id: number) => {
+        const success = await manager.executeRecord(id);
+        if (success) {
+            notify("info", "Execution has started.");
+        } else {
+            notify("error", "Failed to start the execution.");
+        }
+    }, [manager, notify]);
+
+    const startProgress = React.useCallback(() => {
+        const timer = setInterval(() => {
+            console.log(liveRefreshProgress);
+            if (liveRefreshProgress >= 100) {
+                // execute refresh
+                if (liveRefreshTimer) {
+                    clearInterval(liveRefreshTimer);
+                    setLiveRefreshTimer(undefined);
+                }
+                getGraph(websiteRecordFilter, graphView).then(startProgress);
+            } else {
+                console.log("Incrementing progress");
+                setLiveRefreshProgress(liveRefreshProgress >= 100 ? 100 : liveRefreshProgress + 10);
+            }
+        }, 1000);
+        setLiveRefreshTimer(timer);
+        console.log("progress started");
+    }, [liveRefreshProgress, setLiveRefreshTimer, setLiveRefreshProgress, getGraph, liveRefreshTimer, websiteRecordFilter, graphView]);
+
+    const handleChangeLiveRefresh = React.useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+        setLiveRefresh(event.target.checked);
+        if (event.target.checked) {
+            // start timer
+            startProgress();
+        } else {
+            // kill timer
+            if (liveRefreshTimer) {
+                clearInterval(liveRefreshTimer);
+                setLiveRefreshTimer(undefined);
+            }
+        }
+    }, [setLiveRefresh, startProgress, setLiveRefreshTimer, liveRefreshTimer]);
+
 
     return (
         <Box sx={{ display: 'flex' }}>
@@ -137,7 +213,7 @@ function VisualisationContent() {
                         }}
                     >
                         <Typography
-                            sx={{ flex: '1 1 100%' }}
+                            sx={{ flex: '1 1 50%' }}
                             variant="h5"
                             id="tableTitle"
                             component="h1"
@@ -145,6 +221,13 @@ function VisualisationContent() {
                         >
                             Visualisation
                         </Typography>
+                        <FormControlLabel
+                            value="start"
+                            control={<Switch color="primary" checked={liveRefresh} onChange={handleChangeLiveRefresh} disabled={websiteRecordFilter === undefined} />}
+                            label="Live refresh"
+                            labelPlacement="start"
+                            sx={{ minWidth: 150, mr: 3 }}
+                        />
                         <FormControl sx={{ ml: 2, mr: 2 }}>
                             <FormLabel id="graph-view-radio-button">View mode</FormLabel>
                             <RadioGroup
@@ -222,7 +305,7 @@ function VisualisationContent() {
                                                     </React.Fragment>
                                                 )}
                                                 {(selectedNode.data.crawlTime && selectedNode.data.crawlTime.trim() !== "")
-                                                    ? <Button variant="contained" >
+                                                    ? <Button variant="contained" onClick={() => handleRecordExecuteClick(selectedNode.data.owner)}>
                                                         Crawl {websiteRecords.filter(rec => rec.pk === websiteRecordFilter).map(rec => rec.label).join()} now
                                                     </Button>
                                                     : <Button variant="contained" onClick={handleCreateWebsiteRecord}>
@@ -234,6 +317,20 @@ function VisualisationContent() {
                             </div>
                         </div>
                     </Container>
+                    <Snackbar
+                        open={notificationOpen}
+                        autoHideDuration={6000}
+                        onClose={handleNotificationClose}
+                        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+                    >
+                        <Alert
+                            onClose={handleNotificationClose}
+                            severity={notificationSeverity}
+                            sx={{ width: '100%' }}
+                        >
+                            {notificationMessage}
+                        </Alert>
+                    </Snackbar>
                 </Container>
             </Box>
         </Box>

@@ -216,7 +216,7 @@ export default class ApiManager {
     async executeRecord(id: number) {
         try {
             const response = await this.inst.post(`execution/${id}/`);
-            if (response.status > 200) {
+            if (response.status > 201) {
                 return false;
             }
             return true;

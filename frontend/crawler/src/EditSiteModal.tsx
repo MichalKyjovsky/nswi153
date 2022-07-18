@@ -148,7 +148,7 @@ export default function NewSiteModal(props: EditSiteModalProps) {
         });
 
         const data = {
-            id: record.pk ? record.pk + "" : record.pk,
+            id: record.pk,
             url,
             label,
             interval: fromPeriodicityString(interval),
@@ -158,7 +158,7 @@ export default function NewSiteModal(props: EditSiteModalProps) {
         };
 
         try {
-            console.log(data);
+            console.log(JSON.stringify(data));
             let editedRecord = record.pk ? record.pk : null;
             if (isEdit) {
                 const response = await inst.put("record/", data);

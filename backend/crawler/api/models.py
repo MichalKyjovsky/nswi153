@@ -146,7 +146,7 @@ class WebsiteRecord(models.Model):
     interval = models.IntegerField()
     active = models.BooleanField(default=False)
     regex = models.CharField(max_length=128)
-    job_id = models.CharField(max_length=128)
+    job_id = models.CharField(max_length=128, null=True)
 
     objects = WebsiteRecordManager()
 

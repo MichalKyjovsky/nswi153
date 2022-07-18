@@ -1,5 +1,3 @@
-import sys
-
 from django.db.models import Q
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
@@ -13,7 +11,7 @@ from .models import *
 
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
-from ..tasks.crawler import manage_tasks, start_periodic_task, stop_periodic_task
+from tasks.crawler import manage_tasks, start_periodic_task, stop_periodic_task
 from tasks.transformer import get_graph as transformer_get_graph
 
 status_mapper = {
@@ -865,10 +863,10 @@ def do_activation(record, value, log):
         return Response({"error": f"Invalid Website Record ID {record}: an integer expect!"},
                         status=status.HTTP_400_BAD_REQUEST)
     record = WebsiteRecord.objects.filter(id=record_id).first()
-    if len(record) < 1:
+    if not record:
         return Response({"error": f"Website Record with ID {record_id} was not found! The record was not {log}."},
                         status=status.HTTP_400_BAD_REQUEST)
-    record.active = True if value == 'True' else False
+    record.active = value
     try:
         if record.active:
             start_periodic_task(record)

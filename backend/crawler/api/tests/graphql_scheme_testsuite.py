@@ -7,7 +7,7 @@ class SchemaTestCase(GraphQLTestCase):
     def setUp(self) -> None:
         super().setUp()
 
-    GRAPHQL_URL = '/graphql'
+    GRAPHQL_URL = '/graphql/'
     GRAPHQL_SCHEMA = schema
 
     def test_web_page_query(self):

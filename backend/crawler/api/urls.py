@@ -24,7 +24,5 @@ urlpatterns = [
     path('executions/<page>/', views.get_executions, name='get_executions'),
     path('execution/<record>/<page>/', views.get_execution, name='get_execution'),
     path('execution/<record>/', views.start_execution, name='start_execution'),
-    path('activate/<record>/', views.activate, name='activate_record'),
-    path('deactivate/<record>/', views.deactivate, name='deactivate_record'),
     path('docs/', schema_view.with_ui('swagger', cache_timeout=0), name='api_docs')
 ]

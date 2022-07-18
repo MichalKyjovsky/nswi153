@@ -142,3 +142,5 @@ GitHub.sublime-settings
 
 # SQLite
 *.sqlite
+
+migrations/

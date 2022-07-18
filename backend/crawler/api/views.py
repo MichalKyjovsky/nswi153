@@ -588,55 +588,6 @@ def list_records(request):
     return Response(data=json_data, status=status.HTTP_200_OK)
 
 
-@swagger_auto_schema(
-    methods=['put'],
-    operation_description="Activates the specified `WebsiteRecord`.",
-    manual_parameters=[
-        openapi.Parameter('record', openapi.IN_PATH, "The ID of the record to be activated",
-                          type=openapi.TYPE_INTEGER,
-                          required=True,
-                          example=69),
-    ],
-    responses={
-        200: openapi.Response('The specified `WebsiteRecord` was activated.'),
-        400: openapi.Response('Invalid Record ID provided. ' + SEE_ERROR)
-    },
-    tags=['Website Record'])
-@api_view(['PUT'])
-def activate(request, record):
-    """
-    Activates a :class: `WebsiteRecord`.
-    @param request: the request that for routed to this API endpoint
-    @param record: the ID of the record to be activated
-    @return: the request response
-    """
-    return do_activation(record, True, "activated")
-
-
-@swagger_auto_schema(
-    methods=['put'],
-    operation_description="Deactivates the specified `WebsiteRecord`.",
-    manual_parameters=[
-        openapi.Parameter('record', openapi.IN_PATH, "The ID of the record to be deactivated",
-                          type=openapi.TYPE_INTEGER,
-                          required=True,
-                          example=69),
-    ],
-    responses={
-        200: openapi.Response('The specified `WebsiteRecord` was deactivated.'),
-        400: openapi.Response('Invalid Record ID provided. ' + SEE_ERROR)
-    },
-    tags=['Website Record'])
-@api_view(['PUT'])
-def deactivate(request, record):
-    """
-    Deactivates a :class: `WebsiteRecord`.
-    @param request: the request that for routed to this API endpoint
-    @param record: the record to be deactivated
-    @return: the request response
-    """
-    return do_activation(record, False, "deactivated")
-
 
 ########################################################
 # WebsiteRecord CRUD operations
@@ -730,7 +681,7 @@ def update_record(request):
         data = json.loads(json_data)
 
         # Run crawling
-        task = manage_tasks(WebsiteRecord.objects.get(pk=data['id']), True)
+        task = manage_tasks(WebsiteRecord.objects.get(id=data['id']), True)
 
         return Response({"message": f"Record was updated successfully!",
                          "taskId": task}, status=status.HTTP_204_NO_CONTENT)
@@ -847,37 +798,6 @@ def add_tags(response_dict, record_tags):
         if pk in record_tags:
             model['tags'] = record_tags[pk]
     return response_dict
-
-
-def do_activation(record, value, log):
-    """
-    Performs a (de) activation of a :class: `WebsiteRecord`.
-    @param record: record to be activated
-    @param value: expected boolean value (True for activation, False for deactivation)
-    @param log: log message
-    @return: response to the request
-    """
-    try:
-        record_id = int(record)
-    except ValueError:
-        return Response({"error": f"Invalid Website Record ID {record}: an integer expect!"},
-                        status=status.HTTP_400_BAD_REQUEST)
-    record = WebsiteRecord.objects.filter(id=record_id).first()
-    if not record:
-        return Response({"error": f"Website Record with ID {record_id} was not found! The record was not {log}."},
-                        status=status.HTTP_400_BAD_REQUEST)
-    record.active = value
-    try:
-        if record.active:
-            start_periodic_task(record)
-        else:
-            stop_periodic_task(record)
-    except Exception:
-        return Response({"error": f"Invalid Website Record ID {record}: or Celery exception."},
-                        status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-    # If Celery crushed there is no point to save the action
-    record.save()
-    return Response({"message": f"Website Record with ID {record_id} was {log}."}, status=status.HTTP_200_OK)
 
 
 def map_execution_status(executions):

@@ -55,6 +55,7 @@ class Inspector(object):
             base_url: Base URL for the deduplication from the target set (each URL/domain node would have referenced
                       itself)
         """
+        # TODO: Add boundary_node tag and propagate it into the db
         for url in urls:
             if url not in new_urls and url not in processed_urls and cls._matches_regex_boundary(url):
                 new_urls.append(url)
@@ -62,7 +63,7 @@ class Inspector(object):
                 filtered_urls.add(url)
 
             if url != cur_node["url"]:
-                cur_node["executionTargets"].append(url)
+                cur_node["execution_targets"].append(url)
 
     @classmethod
     def _inspect_url(cls, links: list, base_url: str, strip_base: str, path: str) -> set:
@@ -149,7 +150,8 @@ class Inspector(object):
                 path = url[:url.rfind('/') + 1] if '/' in parts.path else url
 
                 # Initialize current node
-                cur_node = {"url": url, "domain": base, "executionTargets": [], "crawl_time": datetime.datetime.now()}
+                cur_node = {"url": url, "domain": base, "execution_targets": [], "crawl_time": datetime.datetime.now(),
+                            "boundary_node": False}
 
                 soup = BeautifulSoup(response.text, "lxml")
 
@@ -163,7 +165,7 @@ class Inspector(object):
 
                 cls._handle_urls(urls_to_be_processed, new_urls, processed_urls, cur_node, filtered_urls, base_url)
 
-                cur_node["executionTargets"] = sorted(cur_node["executionTargets"])
+                cur_node["execution_targets"] = sorted(cur_node["execution_targets"])
 
                 # Add to result set
                 out_dump.append(cur_node)
@@ -177,8 +179,9 @@ class Inspector(object):
 
         # Add leaf nodes
         out_dump = out_dump + [
-            {"url": x, "domain": f"{urlsplit(x).netloc}", "executionTargets": [], "crawl_time": datetime.datetime.now(),
-             'title': f"{urlsplit(x).netloc}"} # TODO: Visit website title
+            {"url": x, "domain": f"{urlsplit(x).netloc}", "execution_targets": [],
+             "crawl_time": datetime.datetime.now(),
+             "title": f"{urlsplit(x).netloc}", "boundary_node": True}
             for x in
             filtered_urls]
 

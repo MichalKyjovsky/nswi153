@@ -2,67 +2,91 @@
   {
     "url": "https://gum.co/oLpqb/LASTCHANCE?wanted=true",
     "domain": "gum.co",
-    "executionTargets": [
+    "execution_targets": [
       "https://gum.co/oLpqb?wanted=true",
       "https://scrapethissite.com/",
       "https://scrapethissite.com/faq/",
       "https://scrapethissite.com/lessons/",
       "https://scrapethissite.com/login/",
       "https://scrapethissite.com/pages/"
-    ]
+    ],
+    "crawl_time": "datetime.datetime(2022,7, 18, 16, 57, 21, 362831)",
+    "boundary_node": "False",
+    "title": "Scrape This Site Membership"
   },
   {
     "url": "https://gum.co/oLpqb?wanted=true",
     "domain": "gum.co",
-    "executionTargets": [
+    "execution_targets": [
       "https://gum.co/oLpqb/LASTCHANCE?wanted=true",
       "https://scrapethissite.com/",
       "https://scrapethissite.com/faq/",
       "https://scrapethissite.com/lessons/",
       "https://scrapethissite.com/login/",
       "https://scrapethissite.com/pages/"
-    ]
+    ],
+    "crawl_time": "datetime.datetime(2022, 7, 18, 16, 57, 20, 676152)",
+    "boundary_node": "False",
+    "title": "Scrape This Site Membership"
   },
   {
     "url": "https://scrapethissite.com/",
     "domain": "scrapethissite.com",
-    "executionTargets": [
+    "execution_targets": [
       "https://scrapethissite.com/faq/",
       "https://scrapethissite.com/lessons/",
       "https://scrapethissite.com/login/",
       "https://scrapethissite.com/pages/"
-    ]
+    ],
+    "crawl_time": "datetime.datetime(2022, 7, 18, 16, 57, 19, 129045)",
+    "boundary_node": "False",
+    "title": "Scrape This Site | A public sandbox for learning web scraping"
   },
   {
     "url": "https://scrapethissite.com/",
     "domain": "scrapethissite.com",
-    "executionTargets": []
+    "execution_targets": [],
+    "crawl_time": "datetime.datetime(2022, 7, 18, 16, 57, 21, 389829)",
+    "title": "scrapethissite.com",
+    "boundary_node": "True"
   },
   {
     "url": "https://scrapethissite.com/faq/",
     "domain": "scrapethissite.com",
-    "executionTargets": []
+    "execution_targets": [],
+    "crawl_time": "datetime.datetime(2022, 7, 18, 16, 57, 21, 389829)",
+    "title": "scrapethissite.com",
+    "boundary_node": "True"
   },
   {
     "url": "https://scrapethissite.com/lessons/",
     "domain": "scrapethissite.com",
-    "executionTargets": [
+    "execution_targets": [
       "https://gum.co/oLpqb/LASTCHANCE?wanted=true",
       "https://gum.co/oLpqb?wanted=true",
       "https://scrapethissite.com/",
       "https://scrapethissite.com/faq/",
       "https://scrapethissite.com/login/",
       "https://scrapethissite.com/pages/"
-    ]
+    ],
+    "crawl_time": "datetime.datetime(2022, 7, 18, 16, 57, 20, 28322)",
+    "boundary_node": "False",
+    "title": "Sign Up | Scrape This Site | A public sandbox for learning web scraping"
   },
   {
     "url": "https://scrapethissite.com/login/",
     "domain": "scrapethissite.com",
-    "executionTargets": []
+    "execution_targets": [],
+    "crawl_time": "datetime.datetime(2022, 7, 18, 16, 57, 21, 389829)",
+    "title": "scrapethissite.com",
+    "boundary_node": "True"
   },
   {
     "url": "https://scrapethissite.com/pages/",
     "domain": "scrapethissite.com",
-    "executionTargets": []
+    "execution_targets": [],
+    "crawl_time": "datetime.datetime(2022, 7, 18, 16, 57, 21, 389829)",
+    "title": "scrapethissite.com",
+    "boundary_node": "True"
   }
 ]

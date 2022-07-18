@@ -12,6 +12,7 @@ from .models import *
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 from tasks.crawler import manage_tasks
+from tasks.transformer import get_graph as transformer_get_graph
 
 status_mapper = {
     1: "IN PROGRESS",
@@ -29,6 +30,10 @@ SEE_ERROR = 'See the "error" key in the response for details.'
     methods=['get'],
     operation_description='Returns an execution graph for the selected record. Not implemented yet.',
     manual_parameters=[
+        openapi.Parameter('mode', openapi.IN_PATH,
+                          "Mode in which the graf should be displayed. i.e., website or domain ",
+                          type=openapi.TYPE_STRING,
+                          required=True),
         openapi.Parameter('record', openapi.IN_QUERY,
                           "IDd of the record whose graph we want to receive, "
                           + "concatenated by a comma without a whitespace.",
@@ -73,17 +78,18 @@ SEE_ERROR = 'See the "error" key in the response for details.'
     },
     tags=['Graph'])
 @api_view(['GET'])
-def get_graph(request):
+def get_graph(request, mode):
     """
     Returns an execution graph for the selected record.
     @param request: the request that for routed to this API endpoint
     @return: the request response
     """
-    if 'records' not in request.query_params:
+    if 'record' not in request.query_params:
         return Response({"error": f"The Website Record ID(s) query parameter was not found!"},
                         status=status.HTTP_400_BAD_REQUEST)
-    records = request.query_params.get('records').split(',')
+    records = request.query_params.get('record').split(',')
     record_ids = []
+    domain_flag = mode == 'domain'
     for record in records:
         if not record.isnumeric():
             return Response({"error": f"The Website Record ID {record} is not an integer!"},
@@ -91,11 +97,7 @@ def get_graph(request):
         record_ids.append(int(record))
     edges = Edge.objects.select_related().filter(Q(source__owner__in=record_ids) | Q(target__owner__in=record_ids))
     nodes = Node.objects.filter(owner__in=record_ids)
-    json_serializer = serializers.get_serializer("json")
-    serializer = json_serializer()
-    serialized_edges = json.loads(serializer.serialize(edges))
-    serialized_nodes = json.loads(serializer.serialize(nodes))
-    output = {"nodes": serialized_nodes, "edges": serialized_edges}
+    output = transformer_get_graph(edges, nodes, domain_flag)
     return Response(data=output, status=status.HTTP_200_OK)
 
 
@@ -522,7 +524,7 @@ def get_execution(request, record, page):
 
 @swagger_auto_schema(
     methods=['POST'],
-    operation_description='Starts and crawler execution of a specified `WebsiteRecord`.',
+    operation_description='Starts crawler execution of a specified `WebsiteRecord`.',
     responses={
         200: openapi.Response('Crawling has started or it was placed in a queue. No body.'),
         400: openapi.Response('The `WebsiteRecord` ID was not present or is invalid.')
@@ -530,6 +532,8 @@ def get_execution(request, record, page):
     tags=['Website Record'])
 @api_view(['POST'])
 def start_execution(request):
+    # Get record id from
+
     if WebsiteRecord.objects.filter().exists():
         # TODO: Sanitize data
         task = manage_tasks(WebsiteRecord.objects.get(request.body['id']))
@@ -538,7 +542,6 @@ def start_execution(request):
                         status=status.HTTP_201_CREATED)
     else:
         return Response({"error": "Invalid record parameters entered!"}, status=status.HTTP_400_BAD_REQUEST)
-
 
 
 @swagger_auto_schema(

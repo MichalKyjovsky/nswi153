@@ -1,23 +1,83 @@
-from ..api.models import Edge, Node, WebsiteRecord
+import json
+
+from django.core import serializers
+
+from api.models import Edge, Node, WebsiteRecord
 from django.db import transaction
 from urllib.parse import urlsplit
 
 
-def get_domain_graph(record: WebsiteRecord):
-    edges = []
+def get_graph(raw_edges: list, raw_nodes: list, domain: bool = True):
+    json_serializer = serializers.get_serializer("json")
+    serializer = json_serializer()
 
-    # Get all edges of the current WebsiteRecord
-    raw_edges = Edge.objects.filter(owner=record).all()
+    if domain:
+        edges_preprocessed = []
 
-    for edge in raw_edges:
-        edges.append({
-            'source': f"{urlsplit(edge.source.url).netloc}",
-            'target': f"{urlsplit(edge.target.url).netloc}",
-        })
+        for edge in raw_edges:
+            edges_preprocessed.append({
+                "model": 'api.edge',
+                'source': {
+                    "url": f"{urlsplit(edge.source.url).netloc}",
+                    "crawl_time": edge.source.crawl_time,
+                    "owner": edge.source.owner.id
+                },
+                'target': {
+                    "url": f"{urlsplit(edge.target.url).netloc}",
+                    "crawl_time": edge.target.crawl_time,
+                    "owner": edge.target.owner.id
+                },
+            })
 
-    # Make the edges unique
-    return list(set(edges))
+        seen = set()
+        edges = []
 
+        # Make nodes and edges unique
+        for edge in edges_preprocessed:
+            if (edge['source']['url'], edge['target']['url']) not in seen:
+                seen.add((edge['source']['url'], edge['target']['url']))
+                edges.append(edge)
+
+        serialized_nodes = []
+        serialized_edges = []
+
+        pk = 0
+
+        for i in range(len(edges)):
+            serialized_nodes.append(
+                {
+                    'model': 'api.node',
+                    'pk': pk,
+                    'fields': edges[i]['source']
+                }
+            )
+            serialized_nodes.append(
+                {
+                    'model': 'api.node',
+                    'pk': pk + 1,
+                    'fields': edges[i]['target']
+                }
+            )
+            serialized_edges.append(
+                {
+                    'model': 'api.edge',
+                    'pk': i,
+                    'fields': {
+                        'source': i,
+                        'target': i + 1
+                    }
+                }
+            )
+            pk += 2
+
+    else:
+        nodes_filtered = raw_nodes
+        edges_filtered = raw_edges
+
+        serialized_edges = json.loads(serializer.serialize(edges_filtered))
+        serialized_nodes = json.loads(serializer.serialize(nodes_filtered))
+
+    return {"nodes": serialized_nodes, "edges": serialized_edges}
 
 
 def transform_graph(raw_nodes: list, record_id: int) -> [list, list]:
@@ -38,11 +98,12 @@ def transform_graph(raw_nodes: list, record_id: int) -> [list, list]:
             'title': node['title'],
             'crawl_time': node['crawl_time'],
             'url': node['url'],
-            # This is an expensive operation but I am not into implement json serializer
-            'owner': WebsiteRecord.objects.filter(id=record_id).first()
+            # This is an expensive operation, but I am not into implement json serializer
+            'owner': WebsiteRecord.objects.filter(id=record_id).first(),
+            'boundary_record': node['boundary_record']
         })
 
-        edges += [{'source': node['url'], 'target': target} for target in node['executionTargets']]
+        edges += [{'source': node['url'], 'target': target} for target in node['execution_targets']]
 
     return nodes, edges
 

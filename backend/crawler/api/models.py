@@ -82,6 +82,10 @@ class NodeManager(models.Manager):
             if field not in self.fields or data[field] is None:
                 return False
 
+            if 'boundary_record' in data.keys() and data['boundary_record'] not in [True, False]:
+                # invalid casting ValueError should be caught in the views.py
+                return False
+
         return True
 
     def create_node(self, dict_data: dict):
@@ -187,6 +191,7 @@ class Node(models.Model):
     """
     title = models.CharField(max_length=2048, null=True)
     crawl_time = models.CharField(max_length=2048)
+    boundary_record = models.BooleanField(default=False)
     url = models.CharField(max_length=2048)
     owner = models.ForeignKey(WebsiteRecord, on_delete=models.CASCADE)
 

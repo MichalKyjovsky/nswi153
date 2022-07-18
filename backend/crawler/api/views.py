@@ -160,7 +160,11 @@ def get_graph(request):
                                    example="awesome,crawl,quick")
         }),
     responses={
-        201: openapi.Response('Record was created successfully.'),
+        201: openapi.Response('Record was created successfully. Includes ID of the new record under key "pk".',
+                              examples={"application/json": {
+                                  'message': 'Record and its tags created successfully! (1 record, 3 tags)',
+                                  'pk': 1
+                              }}),
         400: openapi.Response('When invalid record data was provided. ' + SEE_ERROR)
     },
     tags=['Website Record'])
@@ -649,8 +653,9 @@ def add_record(request):
                 record.tags.add(tag)
                 tag.save()
 
-        return Response({"message": f"Record and its tags created successfully! (1 record, {len(tags)} tags)"},
-                        status=status.HTTP_201_CREATED)
+        return Response(
+            {"message": f"Record and its tags created successfully! (1 record, {len(tags)} tags)", "pk": record.pk},
+            status=status.HTTP_201_CREATED)
     except (ValueError, DatabaseError, IntegrityError, transaction.TransactionManagementError):
         return Response({"error": "Invalid record parameters entered!"}, status=status.HTTP_400_BAD_REQUEST)
 

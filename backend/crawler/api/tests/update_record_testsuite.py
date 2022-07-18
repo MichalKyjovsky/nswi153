@@ -11,7 +11,6 @@ class UpdateRecordTest(TestCase):
 
     def test_valid_update_remove_tags(self):
         request_data = {'id': 5, "label": "test", "tags": "a,b"}
-        #request_data = {'id': 5, "active": False, "interval": 100, "regex": "www.amazon.com.*", "label": "amazon_crawl", "tags": "abc", "url": "http://www.amazon.com"}
         response = self.client.post(request_url, data=request_data)
         assert 'message' in response.data
         assert len(WebsiteRecord.objects.filter(label='test')) > 0

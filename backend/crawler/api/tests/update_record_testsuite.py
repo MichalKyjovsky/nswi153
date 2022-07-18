@@ -1,7 +1,6 @@
 from django.test import TestCase
 from api.models import WebsiteRecord, Tag
 from rest_framework import status
-import json
 
 request_url = '/api/record/'
 content_type = "application/json"

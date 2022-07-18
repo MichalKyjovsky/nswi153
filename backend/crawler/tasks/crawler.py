@@ -1,6 +1,5 @@
 import sys
 
-from celery import shared_task
 import celery.schedules
 from core.inspector.inspector import Inspector
 from redbeat import RedBeatSchedulerEntry

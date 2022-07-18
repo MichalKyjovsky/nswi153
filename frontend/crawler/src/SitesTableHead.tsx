@@ -86,7 +86,7 @@ const headCells: readonly HeadCell[] = [
         label: 'Actions',
         canFilter: false,
         canOrder: false,
-        width: 112
+        width: 154
     },
 ];
 

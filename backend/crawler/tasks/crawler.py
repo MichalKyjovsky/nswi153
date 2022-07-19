@@ -4,7 +4,7 @@ import celery.schedules
 from core.inspector.inspector import Inspector
 from django.db import transaction
 from redbeat import RedBeatSchedulerEntry
-from ..api.models import WebsiteRecord, Execution
+from api.models import WebsiteRecord, Execution
 
 from .transformer import transform_graph, persist_graph
 from crawler.celery import app

@@ -10,19 +10,19 @@ services:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
 
-  frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-    volumes:
-      - './frontend/crawler:/usr/src/frontend/crawler'
-      - '/usr/src/frontend/crawler/node_modules'
-    ports:
-      - "3000:3000"
-    environment:
-      - CHOKIDAR_USEPOLLING=true
-    depends_on:
-      - backend
+#  frontend:
+#    build:
+#      context: ./frontend
+#      dockerfile: Dockerfile
+#    volumes:
+#      - './frontend/crawler:/usr/src/frontend/crawler'
+#      - '/usr/src/frontend/crawler/node_modules'
+#    ports:
+#      - "3000:3000"
+#    environment:
+#      - CHOKIDAR_USEPOLLING=true
+#    depends_on:
+#      - backend
 
   backend:
     build:
@@ -36,7 +36,7 @@ services:
     env_file:
       - ./.env/.dev
     ports:
-      - "8000:8000"
+      - "1337:8000"
     environment:
       - POSTGRES_NAME=postgres # Load from .env file
       - POSTGRES_USER=postgres

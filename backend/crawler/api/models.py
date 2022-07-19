@@ -25,7 +25,7 @@ class WebsiteRecordManager(models.Manager):
         if 'label' in data.keys() and (len(data['label']) > 2564 or len(data['label']) == 0):
             return False
 
-        if 'interval' in data.keys() and int(data['interval']) <= 0:
+        if 'interval' in data.keys() and int(data['interval']) < 0:
             # invalid casting ValueError should be caught in the views.py
             return False
 
@@ -71,7 +71,7 @@ class WebsiteRecordManager(models.Manager):
 
 
 class NodeManager(models.Manager):
-    fields = ('title', 'url', 'crawl_time', 'owner')
+    fields = ('title', 'url', 'crawl_time', 'owner', 'boundary_record')
 
     def valid_node_data(self, data):
         """
@@ -79,7 +79,7 @@ class NodeManager(models.Manager):
 
         """
         for field in data:
-            if field not in self.fields or data[field] is None:
+            if field not in self.fields:
                 return False
 
             if 'boundary_record' in data.keys() and data['boundary_record'] not in [True, False]:

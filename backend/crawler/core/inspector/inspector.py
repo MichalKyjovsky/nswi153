@@ -55,7 +55,6 @@ class Inspector(object):
             base_url: Base URL for the deduplication from the target set (each URL/domain node would have referenced
                       itself)
         """
-        # TODO: Add boundary_node tag and propagate it into the db
         for url in urls:
             if url not in new_urls and url not in processed_urls and cls._matches_regex_boundary(url):
                 new_urls.append(url)
@@ -151,7 +150,7 @@ class Inspector(object):
 
                 # Initialize current node
                 cur_node = {"url": url, "domain": base, "execution_targets": [], "crawl_time": datetime.datetime.now(),
-                            "boundary_node": False}
+                            "boundary_record": False}
 
                 soup = BeautifulSoup(response.text, "lxml")
 
@@ -181,7 +180,7 @@ class Inspector(object):
         out_dump = out_dump + [
             {"url": x, "domain": f"{urlsplit(x).netloc}", "execution_targets": [],
              "crawl_time": datetime.datetime.now(),
-             "title": f"{urlsplit(x).netloc}", "boundary_node": True}
+             "title": f"{urlsplit(x).netloc}", "boundary_record": True}
             for x in
             filtered_urls]
 

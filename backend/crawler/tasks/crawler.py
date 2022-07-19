@@ -2,6 +2,7 @@ import sys
 
 import celery.schedules
 from core.inspector.inspector import Inspector
+from django.db import transaction
 from redbeat import RedBeatSchedulerEntry
 from ..api.models import WebsiteRecord, Execution
 
@@ -10,10 +11,14 @@ from crawler.celery import app
 
 
 @app.task(bind=True)
-def run_crawler_task(self, url: str, regex: str, record_id: int) -> None:
+def run_crawler_task(self, url: str, regex: str, record_id: int, title: str) -> None:
     nodes = Inspector.crawl_url(url, regex)
     # TODO: Create Execution and Execution link
     persist_graph(*transform_graph(nodes, record_id))
+    # with transaction.atomic():
+    #     execution = Execution(title=title, url=url, crawl_duration=self.runtime,
+    #                           website_record=WebsiteRecord.objects.get(record_id), status=self.status)
+    #     execution.save()
 
 
 def schedule_periodic_crawler_task(url: str, regex: str, record_id: int, interval: int) -> RedBeatSchedulerEntry:

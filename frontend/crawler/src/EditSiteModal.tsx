@@ -158,7 +158,6 @@ export default function NewSiteModal(props: EditSiteModalProps) {
         };
 
         try {
-            console.log(JSON.stringify(data));
             let editedRecord = record.pk ? record.pk : null;
             if (isEdit) {
                 const response = await inst.put("record/", data);
@@ -173,7 +172,6 @@ export default function NewSiteModal(props: EditSiteModalProps) {
                     console.log(response);
                 } else {
                     editedRecord = response.data.pk;
-                    console.log("Added record pk: ", editedRecord);
                 }
             }
 

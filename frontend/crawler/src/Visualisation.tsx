@@ -25,6 +25,7 @@ import FormLabel from '@mui/material/FormLabel';
 import Snackbar from '@mui/material/Snackbar';
 import MuiAlert, { AlertProps } from '@mui/material/Alert';
 import Switch from '@mui/material/Switch';
+import CircularProgress from '@mui/material/CircularProgress';
 import ApiManager, { WebsiteRecordForSelect } from './ApiManager';
 import GraphVisualizer from './GraphVisualizer';
 import { Button, Stack } from '@mui/material';
@@ -79,6 +80,15 @@ function VisualisationContent() {
         getRecords();
     }, [getRecords]);
 
+    // this clears the timer on unmount
+    React.useEffect(() => {
+        return () => {
+            if (liveRefreshTimer) {
+                clearInterval(liveRefreshTimer);
+            }
+        };
+    }, [liveRefreshTimer]);
+
     const handleWebsiteRecordFilter = (event: SelectChangeEvent<number | undefined>) => {
         const value = event.target.value;
         setWebsiteRecordFilter(value === undefined || value === noFilter ? undefined : Number(value));
@@ -88,6 +98,37 @@ function VisualisationContent() {
         setGraphView((event.target as HTMLInputElement).value);
     };
 
+    const compareNodes = (oldNodes: Node[], newNodes: Node[]) => {
+        if (oldNodes.length !== newNodes.length) {
+            return false;
+        }
+
+        const dict: Record<string, Node> = {};
+        oldNodes.forEach(node => dict[node.id] = node);
+
+        return newNodes.every(node => {
+            if (dict[node.id]) {
+                const oldData = dict[node.id].data;
+                const { data } = node;
+                return oldData.crawlTime === data.crawlTime
+                    && oldData.url === data.url
+                    && oldData.owner === data.owner
+                    && oldData.boundaryNode === data.boundaryNode;
+            } else return false;
+        })
+    };
+
+    const compareEdges = (oldEdges: Edge[], newEdges: Edge[]) => {
+        if (oldEdges.length !== newEdges.length) {
+            return false
+        }
+
+        const set = new Set<string>();
+        oldEdges.forEach(edge => set.add(edge.id));
+
+        return newEdges.every(edge => set.has(edge.id));
+    }
+
     const getGraph = React.useCallback(async (records: number | undefined, graphView: string) => {
         setSelectedNode(null);
         if (records !== undefined) {
@@ -96,8 +137,17 @@ function VisualisationContent() {
                 const visualizer = new GraphVisualizer(graph);
                 visualizer.layout();
                 const visualizedGraph = visualizer.getGraph(800, 600);
-                setNodes(visualizedGraph.nodes);
-                setEdges(visualizedGraph.edges);
+                setNodes(oldNodes => {
+                    let newNodes = oldNodes;
+                    setEdges(oldEdges => {
+                        if (!compareNodes(oldNodes, visualizedGraph.nodes) || !compareEdges(oldEdges, visualizedGraph.edges)) {
+                            newNodes = visualizedGraph.nodes;
+                            return visualizedGraph.edges;
+                        }
+                        return oldEdges;
+                    });
+                    return newNodes;
+                });
                 return;
             }
         }
@@ -132,6 +182,7 @@ function VisualisationContent() {
             notify("success", "Record was successfully saved.");
             getRecords().then(() => {
                 setWebsiteRecordFilter(editedRecord);
+                setLiveRefresh(true);
             });
         }
     }
@@ -154,44 +205,51 @@ function VisualisationContent() {
         const success = await manager.executeRecord(id);
         if (success) {
             notify("info", "Execution has started.");
+            setLiveRefresh(true);
         } else {
             notify("error", "Failed to start the execution.");
         }
     }, [manager, notify]);
 
     const startProgress = React.useCallback(() => {
+        setLiveRefreshProgress(0);
         const timer = setInterval(() => {
-            console.log(liveRefreshProgress);
-            if (liveRefreshProgress >= 100) {
-                // execute refresh
-                if (liveRefreshTimer) {
-                    clearInterval(liveRefreshTimer);
-                    setLiveRefreshTimer(undefined);
+            setLiveRefreshProgress((prevProgress) => {
+                if (prevProgress >= 100) {
+                    // execute refresh
+                    setLiveRefreshTimer((prevTimer) => {
+                        if (prevTimer) {
+                            clearInterval(prevTimer);
+                        }
+                        return undefined;
+                    });
+                    getGraph(websiteRecordFilter, graphView).then(startProgress);
                 }
-                getGraph(websiteRecordFilter, graphView).then(startProgress);
-            } else {
-                console.log("Incrementing progress");
-                setLiveRefreshProgress(liveRefreshProgress >= 100 ? 100 : liveRefreshProgress + 10);
-            }
+                return prevProgress >= 100 ? 100 : prevProgress + 10
+            });
         }, 1000);
         setLiveRefreshTimer(timer);
-        console.log("progress started");
-    }, [liveRefreshProgress, setLiveRefreshTimer, setLiveRefreshProgress, getGraph, liveRefreshTimer, websiteRecordFilter, graphView]);
+    }, [setLiveRefreshTimer, setLiveRefreshProgress, getGraph, websiteRecordFilter, graphView]);
 
-    const handleChangeLiveRefresh = React.useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    const handleChangeLiveRefresh = (event: React.ChangeEvent<HTMLInputElement>) => {
         setLiveRefresh(event.target.checked);
-        if (event.target.checked) {
+    };
+
+    React.useEffect(() => {
+        if (liveRefresh) {
             // start timer
             startProgress();
         } else {
             // kill timer
-            if (liveRefreshTimer) {
-                clearInterval(liveRefreshTimer);
-                setLiveRefreshTimer(undefined);
-            }
+            setLiveRefreshTimer((prevTimer) => {
+                if (prevTimer) {
+                    clearInterval(prevTimer);
+                }
+                return undefined;
+            });
+            setLiveRefreshProgress(0);
         }
-    }, [setLiveRefresh, startProgress, setLiveRefreshTimer, liveRefreshTimer]);
-
+    }, [liveRefresh, startProgress]);
 
     return (
         <Box sx={{ display: 'flex' }}>
@@ -224,9 +282,14 @@ function VisualisationContent() {
                         <FormControlLabel
                             value="start"
                             control={<Switch color="primary" checked={liveRefresh} onChange={handleChangeLiveRefresh} disabled={websiteRecordFilter === undefined} />}
-                            label="Live refresh"
+                            label={(
+                                <Stack direction={'row'} sx={{ alignItems: 'center' }}>
+                                    <CircularProgress variant={liveRefreshProgress >= 100 ? "indeterminate" : "determinate"} value={liveRefreshProgress} sx={{ mr: 1 }} />
+                                    <Typography>Live refresh</Typography>
+                                </Stack>
+                            )}
                             labelPlacement="start"
-                            sx={{ minWidth: 150, mr: 3 }}
+                            sx={{ minWidth: 200, mr: 3 }}
                         />
                         <FormControl sx={{ ml: 2, mr: 2 }}>
                             <FormLabel id="graph-view-radio-button">View mode</FormLabel>

@@ -220,7 +220,7 @@ function SitesContent() {
                                             <TableCell><Checkbox checked={row.active} /></TableCell>
                                             <TableCell>
                                                 {
-                                                    row.tags.map((tag: string, tagIndex: number) =>
+                                                    row.tags.filter(tag => tag && tag.length > 0).map((tag: string, tagIndex: number) =>
                                                         <Chip
                                                             sx={{ ml: "1px", mr: "1px" }}
                                                             label={tag}

@@ -22,22 +22,44 @@ import Radio from '@mui/material/Radio';
 import RadioGroup from '@mui/material/RadioGroup';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import FormLabel from '@mui/material/FormLabel';
+import Snackbar from '@mui/material/Snackbar';
+import MuiAlert, { AlertProps } from '@mui/material/Alert';
+import Switch from '@mui/material/Switch';
+import CircularProgress from '@mui/material/CircularProgress';
 import ApiManager, { WebsiteRecordForSelect } from './ApiManager';
 import GraphVisualizer from './GraphVisualizer';
 import { Button, Stack } from '@mui/material';
+import NewSiteModal from './EditSiteModal';
+import { WebsiteRecord, emptyWebsiteRecord } from "./Common";
 
 const fitViewOptions: FitViewOptions = {
     padding: 0.2
 }
+
+const Alert = React.forwardRef<HTMLDivElement, AlertProps>(function Alert(
+    props,
+    ref,
+) {
+    return <MuiAlert elevation={6} ref={ref} variant="filled" {...props} />;
+});
+
+type Severity = "info" | "success" | "warning" | "error";
 
 function VisualisationContent() {
     const [websiteRecordFilter, setWebsiteRecordFilter] = React.useState<number | undefined>(undefined);
     const [websiteRecords, setWebsiteRecords] = React.useState<WebsiteRecordForSelect[]>([]);
     const [selectedNode, setSelectedNode] = React.useState<Node | null>(null);
     const [graphView, setGraphView] = React.useState("website");
+    const [editModalOpen, setEditModalOpen] = React.useState(false);
+    const [editedRecord, setEditedRecord] = React.useState<WebsiteRecord>(emptyWebsiteRecord());
+    const [notificationOpen, setNotificationOpen] = React.useState(false);
+    const [notificationSeverity, setNotificationSeverity] = React.useState<Severity>("info");
+    const [notificationMessage, setNotificationMessage] = React.useState("");
+    const [liveRefresh, setLiveRefresh] = React.useState(false);
+    const [liveRefreshProgress, setLiveRefreshProgress] = React.useState(0);
+    const [liveRefreshTimer, setLiveRefreshTimer] = React.useState<NodeJS.Timer | undefined>(undefined);
     const [nodes, setNodes] = React.useState<Node[]>([]);
     const [edges, setEdges] = React.useState<Edge[]>([]);
-
 
     const manager = React.useMemo(() => new ApiManager(), []);
 
@@ -46,11 +68,26 @@ function VisualisationContent() {
         setWebsiteRecords(response ?? []);
     }, [manager]);
 
+    const notify = React.useCallback((severity: Severity, message: string) => {
+        setNotificationMessage(message);
+        setNotificationSeverity(severity);
+        setNotificationOpen(true);
+    }, [setNotificationOpen, setNotificationSeverity, setNotificationMessage]);
+
     const noFilter = -1;
 
     React.useEffect(() => {
         getRecords();
     }, [getRecords]);
+
+    // this clears the timer on unmount
+    React.useEffect(() => {
+        return () => {
+            if (liveRefreshTimer) {
+                clearInterval(liveRefreshTimer);
+            }
+        };
+    }, [liveRefreshTimer]);
 
     const handleWebsiteRecordFilter = (event: SelectChangeEvent<number | undefined>) => {
         const value = event.target.value;
@@ -61,6 +98,37 @@ function VisualisationContent() {
         setGraphView((event.target as HTMLInputElement).value);
     };
 
+    const compareNodes = (oldNodes: Node[], newNodes: Node[]) => {
+        if (oldNodes.length !== newNodes.length) {
+            return false;
+        }
+
+        const dict: Record<string, Node> = {};
+        oldNodes.forEach(node => dict[node.id] = node);
+
+        return newNodes.every(node => {
+            if (dict[node.id]) {
+                const oldData = dict[node.id].data;
+                const { data } = node;
+                return oldData.crawlTime === data.crawlTime
+                    && oldData.url === data.url
+                    && oldData.owner === data.owner
+                    && oldData.boundaryNode === data.boundaryNode;
+            } else return false;
+        })
+    };
+
+    const compareEdges = (oldEdges: Edge[], newEdges: Edge[]) => {
+        if (oldEdges.length !== newEdges.length) {
+            return false
+        }
+
+        const set = new Set<string>();
+        oldEdges.forEach(edge => set.add(edge.id));
+
+        return newEdges.every(edge => set.has(edge.id));
+    }
+
     const getGraph = React.useCallback(async (records: number | undefined, graphView: string) => {
         setSelectedNode(null);
         if (records !== undefined) {
@@ -69,8 +137,17 @@ function VisualisationContent() {
                 const visualizer = new GraphVisualizer(graph);
                 visualizer.layout();
                 const visualizedGraph = visualizer.getGraph(800, 600);
-                setNodes(visualizedGraph.nodes);
-                setEdges(visualizedGraph.edges);
+                setNodes(oldNodes => {
+                    let newNodes = oldNodes;
+                    setEdges(oldEdges => {
+                        if (!compareNodes(oldNodes, visualizedGraph.nodes) || !compareEdges(oldEdges, visualizedGraph.edges)) {
+                            newNodes = visualizedGraph.nodes;
+                            return visualizedGraph.edges;
+                        }
+                        return oldEdges;
+                    });
+                    return newNodes;
+                });
                 return;
             }
         }
@@ -99,6 +176,81 @@ function VisualisationContent() {
         setSelectedNode(node);
     }, [setSelectedNode]);
 
+    const handleCloseEditModal = (editedRecord: number | null) => {
+        setEditModalOpen(false);
+        if (editedRecord !== null) {
+            notify("success", "Record was successfully saved.");
+            getRecords().then(() => {
+                setWebsiteRecordFilter(editedRecord);
+                setLiveRefresh(true);
+            });
+        }
+    }
+
+    const handleCreateWebsiteRecord = React.useCallback(() => {
+        const newRecord = emptyWebsiteRecord();
+        newRecord.url = selectedNode?.data.url;
+        setEditedRecord(newRecord);
+        setEditModalOpen(true);
+    }, [setEditedRecord, setEditModalOpen, selectedNode]);
+
+    const handleNotificationClose = (event?: React.SyntheticEvent | Event, reason?: string) => {
+        if (reason === 'clickaway') {
+            return;
+        }
+        setNotificationOpen(false);
+    };
+
+    const handleRecordExecuteClick = React.useCallback(async (id: number) => {
+        const success = await manager.executeRecord(id);
+        if (success) {
+            notify("info", "Execution has started.");
+            setLiveRefresh(true);
+        } else {
+            notify("error", "Failed to start the execution.");
+        }
+    }, [manager, notify]);
+
+    const startProgress = React.useCallback(() => {
+        setLiveRefreshProgress(0);
+        const timer = setInterval(() => {
+            setLiveRefreshProgress((prevProgress) => {
+                if (prevProgress >= 100) {
+                    // execute refresh
+                    setLiveRefreshTimer((prevTimer) => {
+                        if (prevTimer) {
+                            clearInterval(prevTimer);
+                        }
+                        return undefined;
+                    });
+                    getGraph(websiteRecordFilter, graphView).then(startProgress);
+                }
+                return prevProgress >= 100 ? 100 : prevProgress + 10
+            });
+        }, 1000);
+        setLiveRefreshTimer(timer);
+    }, [setLiveRefreshTimer, setLiveRefreshProgress, getGraph, websiteRecordFilter, graphView]);
+
+    const handleChangeLiveRefresh = (event: React.ChangeEvent<HTMLInputElement>) => {
+        setLiveRefresh(event.target.checked);
+    };
+
+    React.useEffect(() => {
+        if (liveRefresh) {
+            // start timer
+            startProgress();
+        } else {
+            // kill timer
+            setLiveRefreshTimer((prevTimer) => {
+                if (prevTimer) {
+                    clearInterval(prevTimer);
+                }
+                return undefined;
+            });
+            setLiveRefreshProgress(0);
+        }
+    }, [liveRefresh, startProgress]);
+
     return (
         <Box sx={{ display: 'flex' }}>
             <Box
@@ -111,6 +263,7 @@ function VisualisationContent() {
                 }}
             >
                 <Container maxWidth={false} sx={{ mt: 2, mb: 2, minWidth: 800, maxWidth: 1600 }}>
+                    {editModalOpen && <NewSiteModal handleClose={handleCloseEditModal} record={editedRecord} />}
                     <Toolbar
                         sx={{
                             pl: { sm: 2 },
@@ -118,7 +271,7 @@ function VisualisationContent() {
                         }}
                     >
                         <Typography
-                            sx={{ flex: '1 1 100%' }}
+                            sx={{ flex: '1 1 50%' }}
                             variant="h5"
                             id="tableTitle"
                             component="h1"
@@ -126,6 +279,18 @@ function VisualisationContent() {
                         >
                             Visualisation
                         </Typography>
+                        <FormControlLabel
+                            value="start"
+                            control={<Switch color="primary" checked={liveRefresh} onChange={handleChangeLiveRefresh} disabled={websiteRecordFilter === undefined} />}
+                            label={(
+                                <Stack direction={'row'} sx={{ alignItems: 'center' }}>
+                                    <CircularProgress variant={liveRefreshProgress >= 100 ? "indeterminate" : "determinate"} value={liveRefreshProgress} sx={{ mr: 1 }} />
+                                    <Typography>Live refresh</Typography>
+                                </Stack>
+                            )}
+                            labelPlacement="start"
+                            sx={{ minWidth: 200, mr: 3 }}
+                        />
                         <FormControl sx={{ ml: 2, mr: 2 }}>
                             <FormLabel id="graph-view-radio-button">View mode</FormLabel>
                             <RadioGroup
@@ -203,14 +368,32 @@ function VisualisationContent() {
                                                     </React.Fragment>
                                                 )}
                                                 {(selectedNode.data.crawlTime && selectedNode.data.crawlTime.trim() !== "")
-                                                    ? <Button variant="contained" >Crawl {websiteRecords.filter(rec => rec.pk === websiteRecordFilter).join()} again</Button>
-                                                    : <Button variant="contained">Create new website record</Button>}
+                                                    ? <Button variant="contained" onClick={() => handleRecordExecuteClick(selectedNode.data.owner)}>
+                                                        Crawl {websiteRecords.filter(rec => rec.pk === websiteRecordFilter).map(rec => rec.label).join()} now
+                                                    </Button>
+                                                    : <Button variant="contained" onClick={handleCreateWebsiteRecord}>
+                                                        Create new website record
+                                                    </Button>}
                                             </React.Fragment>
                                         ) : (<Typography variant="body1">No selected item</Typography>)}
                                 </Stack>
                             </div>
                         </div>
                     </Container>
+                    <Snackbar
+                        open={notificationOpen}
+                        autoHideDuration={6000}
+                        onClose={handleNotificationClose}
+                        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+                    >
+                        <Alert
+                            onClose={handleNotificationClose}
+                            severity={notificationSeverity}
+                            sx={{ width: '100%' }}
+                        >
+                            {notificationMessage}
+                        </Alert>
+                    </Snackbar>
                 </Container>
             </Box>
         </Box>

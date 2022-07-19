@@ -36,7 +36,7 @@ services:
     env_file:
       - ./.env/.dev
     ports:
-      - "8000:8000"
+      - "1337:8000"
     environment:
       - POSTGRES_NAME=postgres # Load from .env file
       - POSTGRES_USER=postgres

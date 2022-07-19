@@ -115,7 +115,7 @@ def transform_graph(raw_nodes: list, record_id: int) -> [list, list]:
             'url': node['url'],
             # This is an expensive operation, but I am not into implement json serializer
             'owner': WebsiteRecord.objects.filter(id=record_id).first(),
-            'boundary_node': node['boundary_node']
+            'boundary_record': node['boundary_record']
         })
 
         edges += [{'source': node['url'], 'target': target} for target in node['execution_targets']]

@@ -2,17 +2,23 @@ import sys
 
 import celery.schedules
 from core.inspector.inspector import Inspector
+from django.db import transaction
 from redbeat import RedBeatSchedulerEntry
-from api.models import WebsiteRecord
+from api.models import WebsiteRecord, Execution
 
 from .transformer import transform_graph, persist_graph
-from crawler.celery import app, celery_is_active
+from crawler.celery import app
 
 
 @app.task(bind=True)
-def run_crawler_task(self, url: str, regex: str, record_id: int) -> None:
+def run_crawler_task(self, url: str, regex: str, record_id: int, title: str) -> None:
     nodes = Inspector.crawl_url(url, regex)
+    # TODO: Create Execution and Execution link
     persist_graph(*transform_graph(nodes, record_id))
+    # with transaction.atomic():
+    #     execution = Execution(title=title, url=url, crawl_duration=self.runtime,
+    #                           website_record=WebsiteRecord.objects.get(record_id), status=self.status)
+    #     execution.save()
 
 
 def schedule_periodic_crawler_task(url: str, regex: str, record_id: int, interval: int) -> RedBeatSchedulerEntry:
@@ -25,11 +31,11 @@ def schedule_periodic_crawler_task(url: str, regex: str, record_id: int, interva
 
 
 def manage_tasks(record: WebsiteRecord, reschedule: bool = False):
-    if 'test' in sys.argv or not celery_is_active():
+    if 'test' in sys.argv:
         return 0
 
     if not reschedule:
-        if record.interval:
+        if record.active and record.interval:
             record.job_id = f'redbeat:task:{record.id}'
             task_id = schedule_periodic_crawler_task(record.url, record.regex, record.id, record.interval).key
             record.save()
@@ -49,18 +55,12 @@ def manage_tasks(record: WebsiteRecord, reschedule: bool = False):
 
 
 def stop_periodic_task(record: WebsiteRecord):
-    if not celery_is_active():
-        return
-
     if 'test' not in sys.argv:
         if record.job_id and record.interval:
             RedBeatSchedulerEntry.from_key(record.job_id, app=app).delete()
 
 
 def start_periodic_task(record: WebsiteRecord):
-    if not celery_is_active():
-        return
-
     if 'test' not in sys.argv:
         if not record.job_id and record.interval:
             schedule_periodic_crawler_task(record.url, record.regex, record.id, record.interval)

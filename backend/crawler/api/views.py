@@ -624,7 +624,7 @@ def add_record(request):
                             status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         return Response({"message": f"Record and its tags created successfully! (1 record, {len(tags)} tags)",
-                         "taskId": task},
+                         "taskId": task, "pk": record.pk},
                         status=status.HTTP_201_CREATED)
     except (ValueError, DatabaseError, IntegrityError, transaction.TransactionManagementError):
         return Response({"error": "Invalid record parameters entered!"}, status=status.HTTP_400_BAD_REQUEST)

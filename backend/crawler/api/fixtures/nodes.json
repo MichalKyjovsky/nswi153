@@ -27,7 +27,7 @@
     "fields": {
       "title": "Node A",
       "url": "http://www.com.foo.baz",
-      "crawl_time": "",
+      "crawl_time": "12/24/2018, 04:59:31",
       "owner": 5
     }
   },
@@ -38,7 +38,8 @@
       "title": "Node B",
       "url": "http://www.com.foo.baz.sas",
       "crawl_time": "",
-      "owner": 5
+      "owner": 5,
+      "boundary_record": true
     }
   },
   {

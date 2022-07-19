@@ -119,11 +119,12 @@ export interface LayoutNode {
     data: {
         crawlTime: string,
         url: string,
-        owner: number
+        owner: number,
+        boundaryNode: boolean
     }
 }
 
-export function createLayoutNode(id: string, crawlTime: string, url: string, owner: number): LayoutNode {
+export function createLayoutNode(id: string, crawlTime: string, url: string, owner: number, boundaryNode: boolean): LayoutNode {
     return {
         id,
         layoutPosX: 0,
@@ -133,7 +134,8 @@ export function createLayoutNode(id: string, crawlTime: string, url: string, own
         data: {
             crawlTime,
             url,
-            owner
+            owner,
+            boundaryNode
         }
     };
 }
